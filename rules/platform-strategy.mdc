@@ -1,0 +1,106 @@
+---
+description: "Platform-specific design principles derived from Gregor Hohpe's Platform Strategy and his DDD Europe 2025 talk. Extends the Systems Architect persona with quality attributes, composition patterns, platform economics, abstraction discipline, and platform-vs-service distinctions."
+alwaysApply: true
+---
+
+# Platform Strategy: Design Principles
+
+This rule extends the core "Systems Architect" persona to platform design and evaluation. It applies when building, assessing, or evolving in-house developer platforms, API platforms, or data platforms. See `platform-abstraction-quality.mdc` for deep abstraction guidance and `platform-economics.mdc` for the Double Pyramid and economics models.
+
+## 1. The 7 "C"s of Platform Quality
+
+Evaluate every platform across these seven dimensions. Trade-offs between them are expected -- but trade-offs must be *conscious* [1].
+
+| Quality | Question |
+| --- | --- |
+| **Cohesion** | Does it present a meaningful whole, or a loose collection of parts? |
+| **Closure** | Are pieces unexpectedly missing within its declared scope? |
+| **Completeness** | Does it offer self-service, docs, debugging tools, and training? |
+| **Consistency** | Can users apply what they learned in one part to another? |
+| **Commensurate Value** | Does using a subset deliver proportionate value? |
+| **Connectedness** | Does it integrate with SSO, monitoring, and existing systems? |
+| **Captivity** | How costly is it to leave? |
+
+> "If you want all the Cs all the time, you'll pay with the eighth C: Complexity." [1]
+
+**Capability Gravity** [2]: Platforms naturally accrue capability (enterprises overindex on feature checklists). Counter-steer toward **Composability** and **Cohesion** -- the stuff at the bottom comes by itself; making pieces easy to combine requires deliberate effort.
+
+## 2. Fruit Salad, Not Fruit Basket
+
+A platform must be **more than the sum of its parts**.
+
+* **Fruit Basket** (antipattern): A bill of materials -- "we run Jenkins + SonarQube + Nexus." Users can get the same fruit individually.
+* **Fruit Salad** (target): Opinionated integration that delivers a new value proposition -- shared identity, consistent versioning, correlated metrics, reduced toil. The combination unlocks use cases that individual parts cannot.
+
+**Litmus test 1 (Basket test)**: If removing the platform wrapper and using the components directly is equally productive, you built a basket [1].
+
+**Litmus test 2 (Innovation test)** [2]: If someone built something on your platform that you **did not anticipate**, that is the mark of a real platform. If users can only do what you pre-planned, you built a common services layer. The goal is to **widen the playing field for innovation**, not narrow it.
+
+## 3. Platform vs IT Service
+
+Use this table to validate that what you're building actually qualifies as a platform, not a relabeled IT service [1]:
+
+| Characteristic | Platform | IT Service |
+| --- | --- | --- |
+| Main Driver | Speed | Reuse |
+| Value Delivery | Indirect (via users) | Direct |
+| Scale Effect | Thrives | Bottleneck |
+| Friction | Low (self-service) | High (ticket-based) |
+| Run as | Product | Project |
+| Evolution | Continuous | Sporadic |
+| Orientation | Customer-centric | Process-centric |
+| Extensibility | Open / semi-open | Closed |
+
+> "A platform team builds the axle that makes the outer loop spin faster. But it's not part of that loop to avoid becoming a bottleneck." [1]
+
+**The Double Pyramid** [2]: The classic IT pyramid (wide base, narrow top) optimizes for **cost/reuse**. A platform inverts the top half: scale economics at the base, **speed/innovation economics** at the top. The platform team is the bearing, the grease, the axle -- it makes the developer inner/outer loop spin faster, but it is **not in the loop**. If the platform team is in the deployment cycle (tickets, approvals, "let me show you how"), you have the old model with a new label. See `platform-economics.mdc` for the full model.
+
+## 4. Railways, Not Guardrails
+
+"Control" means closed-loop regulation via feedback, not "I determine what's allowed" [1]. Prefer **Tracking** (observe, alert, correct) over **Intercepting** (block at the gate). Reserve wrapping for when you genuinely need a new domain vocabulary, not to restrict access.
+
+**The Railway Wheel Principle** [2]: Train wheels stay on track because of their **conical shape** (a self-centering mechanism), not because of the flange (the guardrail). The flange is for emergency tight turns only. High-speed trains run at 350 km/h on this low-friction, self-centering design.
+
+Apply the same principle to platform controls:
+
+* **Lane Assist (target)** -- transparency, rapid feedback, self-centering. Show cloud cost in real time so teams self-correct. Give immediate build/test feedback so developers adjust before hitting limits.
+* **Guardrails (emergency only)** -- hard limits for DDoS, catastrophic misconfiguration, compliance violations. Nobody follows the road by scraping along the guardrail.
+* **Meaningful Defaults** -- help users avoid mistakes without hiding the setting. But careful: removing 100 pieces from a 1000-piece puzzle makes it **harder**, not easier [2]. Cloud settings have inter-relationships; hiding them doesn't reduce cognitive load, it creates an illusion.
+* **Tracking** -- observe actions, alert on violations, let users self-correct.
+
+> "Wherever there's a guardrail, you also want lane assist." [2]
+
+**Anti-pattern (Big Guardrails, No Pavement)** [2]: Promising a "golden path super highway" but spending all budget on guardrails while the happy path is muddy and unpaved. This kills developer productivity.
+
+## 5. Abstraction Traps
+
+* **Composition is not Abstraction** [2] -- combining Lambda-SQS-Lambda is piston-crankshaft naming, not a new semantic level. You cannot have an abstraction if you use the same language from underneath. If the first "solution pattern" on your platform is named after the cloud services it wraps, you built composition, not abstraction.
+* **Good abstractions come from domain understanding** [2] -- name things by purpose ("Ledger Database", "PII-Ready Database"), not by implementation ("Primary-with-CDC-Secondary"). The most powerful platform abstractions live at the **intersection of the business domain and the technical domain** -- a space cloud providers cannot occupy because they serve the entire world, not your organization.
+* **Narrow Interface != Low Cognitive Load** [2] -- overloading a single string parameter to mean "literal value OR filename" is high cognitive load in a simple-looking package. "Two integers, one string, and 30 pages of documentation" is not low cognitive load. The interface size does not measure cognitive load; the **runtime behavior complexity** does.
+* **Abstraction vs Illusion** [2] -- removing settings doesn't reduce cognitive load; it creates an illusion of simplicity that breaks when reality hits (the RPC-in-a-loop problem). Some things have **inherent complexity** -- making them simpler than they are works against you. You want to make it **intuitive**, not **easy**. DDD tackles complexity; it doesn't make it disappear.
+* **Physical Properties Leak** [2] -- abstractions cannot hide latency, cost, quotas, availability, TTL, retry behavior, or duplicate handling. Cloud-neutral abstractions that map a "queue" to SQS, Pub/Sub, and Azure Event Hubs are dangerous because these services have fundamentally different physical characteristics. Joel Spolsky's Law of Leaky Abstractions: most leaks are physical properties.
+* **Failure leaks through every layer** [1][2] -- every abstraction must provide a "stack trace" equivalent so users can debug what is beneath. Like compilers have line number tables to trace bytecode back to source, platform abstractions need **traceability mechanisms**. If your abstraction creates one logical resource but provisions three cloud resources, you need cost attribution, debugging, and incident traceability back through the layers.
+
+See `platform-abstraction-quality.mdc` for the full abstraction discipline.
+
+## 6. Architect Review Checklist
+
+When reviewing platform code or proposals, evaluate:
+
+1. **Mechanism Linkage**: Can you trace each stated benefit to a concrete mechanism to a specific implementation?
+2. **7 C's Balance**: Which quality attributes are being traded off, and is the trade-off conscious?
+3. **Salad or Basket**: Does the integration add value beyond collation?
+4. **Innovation Test** [2]: Can users build things the platform team did not anticipate? Or does the platform restrict the playing field?
+5. **Abstraction vs Illusion**: Are essential distributed system concerns (ordering, retry, backpressure) exposed or hidden? Does the interface use a **new domain vocabulary**, or just passthrough naming from the layer beneath?
+6. **Cognitive Load Honesty** [2]: Does a narrow interface genuinely reduce cognitive load, or does it hide complexity behind overloaded parameters and 30 pages of documentation?
+7. **Cimarron Test** [2]: Is the top of the pyramid being shrunk? Resist "just configure" / "no code" urges that eliminate the innovation layer. See `platform-economics.mdc` Section 3.
+8. **Railway or Guardrail** [2]: Are controls self-centering (feedback, transparency) or blocking (gates, tickets, approvals)?
+9. **Physical Property Leak**: Are latency, cost, quotas, and failure modes surfaced or hidden by the abstraction?
+10. **Stack Trace Equivalent** [2]: Can a user trace a platform-level error back through abstraction layers to the underlying infrastructure?
+11. **Feedback Loop**: Does the platform provide observability into its own layers for debugging?
+12. **Technical Debt**: Is identified debt resolved in this change, not deferred to a backlog?
+
+## 7. Cited Works
+
+* **[1]** Hohpe, G. -- *Platform Strategy: Innovation Through Harmonization* -- [architectelevator.com](https://architectelevator.com/book/platformstrategy/)
+* **[2]** Hohpe, G. -- *Platform Engineering is Domain Driven Design* (DDD Europe 2025) -- [youtube.com](https://www.youtube.com/watch?v=5Ai8UGx7QvQ)

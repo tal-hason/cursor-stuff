@@ -1,0 +1,90 @@
+---
+description: "Deep-dive on platform abstraction quality: illusion traps, cognitive load honesty, domain language construction, physical property constraints, and traceability. Companion to platform-strategy.mdc."
+alwaysApply: true
+---
+
+# Platform Abstraction Quality
+
+Companion rule to `platform-strategy.mdc`. Applies when designing, reviewing, or evolving platform abstractions -- APIs, SDKs, CLIs, IaC modules, or self-service portals that layer on top of cloud or infrastructure services.
+
+## 1. Abstraction vs Illusion
+
+An abstraction creates a **precise new semantic level**. An illusion hides complexity and sets expectations that don't hold [2].
+
+**The Puzzle Test** [2]: Giving someone a 1000-piece jigsaw puzzle with 100 pieces secretly removed does not make it easier. Cloud settings have inter-relationships (cost, latency, security, quotas). Hiding them doesn't reduce cognitive load -- it creates an illusion that breaks at runtime.
+
+**The RPC Trap** [2]: A remote procedure call is nothing like a local procedure call -- no call stack, long latency, distributed state, inconsistent failure modes. Calling it a "procedure call" is an illusion, not an abstraction. The eight fallacies of distributed computing are the canonical litmus test.
+
+**Goldilocks Calibration** [2]: There is no formula for the "right" abstraction level. Almost all abstraction decisions are calibration exercises based on **feedback**. You do a little, see how it goes, compensate. Like steering a car -- you don't calculate wheel angles at home; you steer when the turn comes. Rapid feedback is not inferior to upfront planning; for abstraction design, it is often the only approach that works.
+
+## 2. Cognitive Load != Interface Size
+
+**The Overloaded Parameter Anti-pattern** [2]: A single string parameter that means "literal value" or "filename if it ends with .ext" is **high cognitive load in a simple-looking package** -- the worst possible outcome. You lose the type system's help and force the user to read 30 pages of documentation for a single parameter.
+
+**Serverless Smell** [2]: "Two integers, one string, and 30 pages of documentation." When the visible interface is tiny but the documentation needed to understand runtime behavior is massive, the abstraction is hiding complexity, not managing it.
+
+**Narrow does NOT equal simple**: A narrow interface that overloads meaning is more dangerous than a wider interface with explicit, typed parameters. Prefer expressive types and named options over collapsed "magic" parameters. The cognitive load is in the **runtime behavior**, not the parameter count.
+
+## 3. Domain-Specific Platform Language
+
+**The Naming Imperative** [2]: You cannot have an abstraction if you use the same language from underneath. "Lambda-SQS-Lambda" is composition. "Automobile" is abstraction -- the self-moving property belongs to the system, not to any single part (piston, crankshaft, gear, wheel).
+
+**Build in the Domain Intersection** [2]: The most powerful platform services live at the intersection of:
+
+* **Business domain** (customer, ledger, PII, compliance)
+* **Technical domain** (managed database, compute, networking, IAM)
+
+This intersection produces a **platform domain language** that neither side alone can define. Examples:
+
+| Platform Abstraction | Business Concept | Technical Reality |
+| --- | --- | --- |
+| PII-Ready Database | Customer data classification | Encryption, audit logging, access control, retention policies |
+| Ledger Database | Financial immutability | Primary + CDC + append-only log + point-in-time recovery |
+| Classified Compute | Application security tier | Isolated VPC, specific IAM roles, compliance-scoped monitoring |
+
+> "Build services that the cloud providers fundamentally cannot deliver. You have one advantage: they build for the entire world; you only build for your organization and your domain." [2]
+
+**Gas Pedal vs Accelerator** [2]: "Gas pedal" leaks the implementation (gas engine) into the name. "Accelerator" describes the intent (make the car go faster) and works for electric vehicles too. Small naming differences compound across a platform vocabulary.
+
+## 4. Physical Property Constraints
+
+Abstractions cannot and should not hide **physical properties** [2]:
+
+* Latency and performance characteristics
+* Cost and pricing models
+* Service quotas and rate limits
+* Availability zones and failure domains
+* TTL, retry semantics, and duplicate handling
+* Ordering guarantees (or lack thereof)
+
+**Cloud-Neutral Illusion** [2]: Mapping a "queue" abstraction to SQS, Pub/Sub, and Azure Service Bus is dangerous because these services have fundamentally different physical characteristics (TTL behavior, ordering, deduplication, pricing, quotas). Joel Spolsky's Law of Leaky Abstractions: most leaks are physical properties [3].
+
+**Legitimate physical abstraction**: Kubernetes abstracts node placement but **surfaces** resource requests, limits, affinity, and tolerations. It doesn't pretend all nodes are identical.
+
+## 5. Stack Traces for Abstractions
+
+**The Compiler Analogy** [2]: Java bytecode has line number tables that map back to source code. When something goes wrong at the bytecode level, you get a stack trace pointing to the source line. Platform abstractions need the same discipline.
+
+Requirements for every platform abstraction:
+
+* **Resource Mapping**: If one logical resource creates N cloud resources, document and expose the mapping.
+* **Cost Attribution**: Trace platform-level cost back to the underlying cloud spend.
+* **Error Provenance**: Surface which underlying resource/API call failed, not just "platform error 500."
+* **Metric Correlation**: Link platform metrics to infrastructure metrics (e.g., "Ledger Database write latency" -> "Aurora writer instance latency" + "CDC stream lag").
+
+## 6. Abstraction Quality Checklist
+
+When designing or reviewing a platform abstraction:
+
+1. **New Vocabulary**: Does it introduce domain-specific terms, or passthrough cloud service names?
+2. **Puzzle Test**: Are hidden settings truly independent, or do they have inter-relationships that users will eventually hit?
+3. **Type Expressiveness**: Does the interface use the type system to guide users, or collapse meaning into overloaded strings/integers?
+4. **Physical Honesty**: Are latency, cost, and failure characteristics surfaced or hidden?
+5. **Traceability**: Can users trace errors, costs, and performance from the platform level to the infrastructure level?
+6. **Feedback Calibration**: Is the abstraction level being tuned via user feedback, or was it set once and declared "done"?
+
+## 7. Cited Works
+
+* **[1]** Hohpe, G. -- *Platform Strategy: Innovation Through Harmonization* -- [architectelevator.com](https://architectelevator.com/book/platformstrategy/)
+* **[2]** Hohpe, G. -- *Platform Engineering is Domain Driven Design* (DDD Europe 2025) -- [youtube.com](https://www.youtube.com/watch?v=5Ai8UGx7QvQ)
+* **[3]** Spolsky, J. -- *The Law of Leaky Abstractions* -- [joelonsoftware.com](https://www.joelonsoftware.com/2002/11/11/the-law-of-leaky-abstractions/)

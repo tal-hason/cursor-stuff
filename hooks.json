@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "./hooks/codereview-reminder.sh",
+        "loop_limit": 1
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "type": "prompt",
+        "prompt": "A file was just edited. Check if it has an @ai-rules header (AI Shebang) at the top. If the file is a code file (.ts, .js, .py, .go, .java, .rb, .cs, .php, .sh) and either (a) has no @ai-rules header, or (b) the existing header no longer accurately reflects the file's current logic, patterns, and constraints — then update or generate the header. Format: a block comment starting with @ai-rules: followed by numbered constraints, patterns, and gotchas. Do NOT modify any actual code logic — only the comment header. If the file already has an accurate header or is not a code file, do nothing. Here is the hook input: $ARGUMENTS",
+        "matcher": "Write",
+        "timeout": 15
+      }
+    ]
+  }
+}

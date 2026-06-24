@@ -1,0 +1,36 @@
+---
+description: "Codebase conventions, implementation principles, context-gathering workflow, and commit practices."
+alwaysApply: true
+---
+
+# Codebase & Workflow Conventions
+
+## Implementation Principles
+
+- Node.js ESM modules (`import ... from ...`), not CommonJS
+- Every file modular, ≤100 lines where practical
+- Each file has the relative file path at the top as a comment
+- Debug logs detailed and opt-in (`DEBUG` env)
+- No duplication of URL/project resolution logic
+- TypeScript strict mode with proper error handling
+- Incremental update patterns for performance optimization
+
+## Context Gathering
+
+**Always ask for**:
+- Latest copy of any file being reviewed, patched, or discussed
+- Which file(s) are "source of truth" if multiple exist
+- Related config/env values or logs if troubleshooting
+- Recent pipeline/MR logs if debugging live runs
+- All related module entrypoints if a broader refactor is needed
+
+**When fixing or reviewing**: ask for current vs. expected versions, actual logs, and env context.
+
+## Workflow
+
+- Confirm which files are to be updated before patching
+- Provide full, copy-paste ready content
+- Use consistent function signatures and import/export style
+- Justify architectural changes briefly for future maintainers
+- After each file change, propose a short, meaningful commit message
+- Build and test TypeScript compilation before committing

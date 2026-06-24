@@ -1,0 +1,97 @@
+---
+description: "Platform economics: the Double Pyramid model, scale-vs-speed economics, the Cadillac Cimarron Effect, and the innovation test. Companion to platform-strategy.mdc."
+alwaysApply: true
+---
+
+# Platform Economics: Scale Below, Speed Above
+
+Companion rule to `platform-strategy.mdc`. Applies when making strategic decisions about platform scope, investment, team structure, or roadmap -- anywhere the tension between standardization and innovation surfaces.
+
+## 1. The Double Pyramid
+
+The classic IT pyramid (wide base, narrow top) optimizes for **economies of scale** -- reuse, cost amortization, "bake the cake once and put different cherries on top" [2].
+
+Platform engineering inverts the top half into a **double pyramid**:
+
+* **Bottom half (scale economics)**: Heavy base investment that amortizes -- cloud infrastructure, shared identity, CI/CD pipelines, compliance automation. The more teams use it, the better the economics.
+* **Top half (speed economics)**: Wide and diverse. Many different applications, use cases, and innovations built on top. The platform's value is measured by the **diversity and velocity** of what's built on top, not by how little is built on top.
+
+> "The goal of a platform is not to narrow the playing field. The goal is to widen the playing field. You want to improve the economics of innovation and diversity." [2]
+
+**The Cloud Provider Proof**: A cloud is a scale business (billions per data center, global fiber). But the magic is it **doesn't pass on scale economics to users** -- you get a server for $1/hour. You live in speed economics. The platform delivers scale underneath and speed on top. This drives innovation at both levels [2].
+
+**The BMW Test** [2]: BMW went from 3 models (3, 5, 7 series) to 30+ models. That would not be possible without a platform strategy. If car manufacturers can achieve innovation diversity with bolts, screws, and sheet metal, software can do it with bits and bytes.
+
+## 2. The Innovation Litmus Test
+
+> "If people have built something that you did not anticipate, that is good. That is actually a mark of a platform." [2]
+
+**Real example** [2]: A Singapore government CI/CD platform found a team using the deployment pipeline for data distribution -- pushing data artifacts through the pipeline dozens of times per day. Not the intended use case, but it passed the test: the top of the pyramid was wide enough for unanticipated innovation.
+
+**When reviewing a platform**, ask:
+
+1. Can users build things the platform team did not anticipate?
+2. Is the top of the pyramid getting wider (more diverse use cases) or narrower (more restrictions)?
+3. Does the platform team celebrate unanticipated uses, or treat them as "misuse"?
+
+## 3. The Cadillac Cimarron Effect
+
+**History** [2]: In the 1980s, Cadillac took a Chevy Cavalier, added power windows, nice stereo, automatic transmission, metallic paint, and called it a Cadillac (the Cimarron). Customers rejected it -- "This is a Chevy with options, not a Cadillac." No innovation, no differentiation on top.
+
+**The Platform Trap**: The temptation is always to shrink the top of the pyramid -- "Can't users just configure? Can't this be no-code?" This slips back into the cost-economics model where there is no space for innovation or differentiation.
+
+**Resist the urge to shrink the top**:
+
+* "Just configure" / "no-code" for everything = Cimarron thinking
+* The stuff on top is where innovation happens, where users do things you didn't anticipate
+* If you eliminate the innovation layer, you eliminated the platform's value proposition
+
+**Self-check**: If removing the platform and using the underlying cloud services directly + some shell scripts would be equally productive, you built a Cimarron, not a Cadillac.
+
+## 4. Economies of Scale vs Economies of Speed
+
+These look structurally similar but lead to **inverse decisions** [2]:
+
+| Decision Point | Economies of Scale | Economies of Speed |
+| --- | --- | --- |
+| Scope | Broad -- put everything on one platform | Narrow -- smaller opinionated things |
+| Change tolerance | Low -- 10,000 people depend on base layer | High -- smaller blast radius, faster iteration |
+| Abstraction worry | Low -- stability is the goal | High -- abstractions must hold under rapid change |
+| Failure of fit | Tolerated (cost savings compensate) | Fatal ("lowest common denominator" slows everyone down) |
+| Top of pyramid | Narrow (controlled, anticipated) | Wide (diverse, unanticipated) |
+
+> "These small nuances actually make us make the inverse decisions." [2]
+
+**The Pyramid Warning** [2]: "In real life, we stopped building pyramids some 5,000 years ago. But in IT, we're still like, 'hey, this is the greatest thing.'"
+
+**Key assumption baked into the pyramid**: "I can do this only if I can anticipate everyone's needs." But you **don't want** to anticipate everyone's needs -- you want innovation, people doing things you didn't think about [2].
+
+## 5. The Platform Team's Position
+
+A platform team must NOT be in the developer inner/outer loop [2]:
+
+* **In the loop (anti-pattern)**: Developer deploys -> platform team does something -> feedback returns. This adds friction, creates bottlenecks, and doesn't scale. "If anybody deploys a Lambda function, nobody at AWS does anything."
+* **The axle (target)**: The platform team is the bearing, the grease, the axle that makes the loop spin faster. They build the mechanism, not operate it per-deployment.
+
+**Warning signs** the platform team is in the loop:
+
+* Teams file tickets to get resources
+* "Self-service portal" that triggers a manual process behind the scenes
+* Platform team member must approve / assist / demonstrate for each deployment
+* Platform team's calendar is full of "helping teams" meetings
+
+## 6. Economics Review Checklist
+
+When evaluating platform strategy or roadmap:
+
+1. **Pyramid Shape**: Is the top widening (speed economics) or narrowing (scale economics)?
+2. **Innovation Test**: Can users build unanticipated things?
+3. **Cimarron Check**: Is the differentiation layer being eliminated in favor of "just configure"?
+4. **Loop Position**: Is the platform team in the deployment loop, or powering it from the center?
+5. **Assumption Audit**: What must be true for this platform design to work? Can you anticipate all user needs? If not, is the design open enough?
+6. **Inverse Decision Check**: Are you making a scale-economics decision (broad, standardized) when speed-economics reasoning (narrow, opinionated, diverse) would be correct?
+
+## 7. Cited Works
+
+* **[1]** Hohpe, G. -- *Platform Strategy: Innovation Through Harmonization* -- [architectelevator.com](https://architectelevator.com/book/platformstrategy/)
+* **[2]** Hohpe, G. -- *Platform Engineering is Domain Driven Design* (DDD Europe 2025) -- [youtube.com](https://www.youtube.com/watch?v=5Ai8UGx7QvQ)

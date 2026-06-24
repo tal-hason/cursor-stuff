@@ -1,0 +1,56 @@
+---
+description: Mark Complex/probe steps in plans so /execute-plan can detect and spawn probe-runner subagents
+globs: "**/.cursor/plans/*.plan.md"
+alwaysApply: false
+---
+
+# Probe Detection in Plans
+
+When creating or reviewing a `.plan.md` file:
+
+## During Plan Creation (/create-plan)
+
+When a step is classified as **Complex** (Cynefin) or requires a safe-to-fail experiment:
+
+1. Mark the step clearly in the plan body with: `**Cynefin: Complex -- probe required**`
+2. Include a brief probe description inline (objective, what to test)
+3. The `/execute-plan` command uses this marker to detect probe steps and spawn `probe-runner` subagents
+
+## Probe Plan Template
+
+Each probe plan (created by `/execute-plan` or manually) MUST follow this structure and stay under 100 lines:
+
+```markdown
+# Probe: [Name]
+
+## Objective
+One sentence -- what hypothesis are we testing?
+
+## Steps
+1. [Minimal step]
+2. [Minimal step]
+3. [Observe result]
+
+## Acceptance Criteria
+1. [What must be true for the probe to pass]
+2. [What must be true for the probe to pass]
+
+## Possible Outcomes
+- **Pass**: [What happens next in the main plan]
+- **Partial**: [Adjusted approach]
+- **Fail**: [Fallback strategy]
+
+## Rollback
+[How to undo with zero impact]
+
+## Affected Files
+- [file1] -- [what changes]
+- [file2] -- [what changes]
+```
+
+## Rules
+
+- Probes are safe-to-fail experiments -- they MUST NOT break existing functionality
+- Probes MUST be independently executable (no dependency on other probes)
+- Probe plans MUST be under 100 lines
+- The main plan's execution order MUST gate downstream phases on probe results

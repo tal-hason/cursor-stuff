@@ -1,0 +1,77 @@
+---
+description: "Guidelines for designing microservices and event-driven systems as independent controllers, extending Hexagonal Architecture to the network boundary with Enterprise Integration Patterns."
+alwaysApply: true
+---
+
+# Microservices: Distributed Control Systems
+
+This rule extends the core "Systems Architect" persona to the distributed landscape. Each microservice is viewed as an **Independently Deployable Unit (IDU)** that acts as a discrete controller.
+
+## 1. Core Distributed Principles
+
+* **Independent Deployability**: Every service must have its own CI/CD lifecycle (Tekton/ArgoCD). A change in one service should NEVER require a synchronized deployment of another.
+* **Decentralization**:
+  * **Database per Service**: Data is private to the service. Access is only via the service's **Driving Ports** (APIs).
+  * **Decentralized Governance**: Use the right tool for the job (Node.js for I/O, Python for ML, Go for performance) while maintaining consistent **Ports**.
+* **The Global Setpoint**: The system's desired state is defined by the orchestration layer (ArgoCD/Kubernetes). If a service fails, the orchestration (Feedback Loop) must restart or scale it to meet the Setpoint.
+
+## 2. Technical Mapping (Hexagonal + Microservices)
+
+| Feature                | Hexagonal Architecture Role | Microservice Requirement                                                                                  |
+|------------------------|-----------------------------|-----------------------------------------------------------------------------------------------------------|
+| **Inbound API**        | **Driving Port**            | Must be versioned (gRPC, REST, or WS). No breaking changes without deprecation.                           |
+| **Cross-Service Call** | **Driven Port**             | Must implement Circuit Breakers and Retries (The Controller's safety guard).                              |
+| **State/Storage**      | **Driven Adapter**          | Encapsulated. The domain logic remains agnostic of whether it's Postgres, Redis, or S3.                   |
+| **Events/Bus**         | **Driven Port**             | Use for asynchronous decoupling. Prefer Eventual Consistency over Distributed Transactions.               |
+
+## 3. Implementation Guardrails
+
+* **Observability (Feedback)**:
+  * Every outbound request must propagate a Trace-ID.
+  * Logs must be structured (JSON) and include the service name and environment.
+* **Contract-First Development**:
+  * Define gRPC .proto files or TypeScript interfaces BEFORE implementation. These are the "Ports" that define the system boundaries.
+* **Resiliency**:
+  * Implement Liveness and Readiness probes in all Kubernetes manifests.
+  * Core domain logic must handle "Adapter Failures" (e.g., database down) gracefully without crashing the process.
+* **Size Constraint**:
+  * Keep files modular (<=100 lines). If an adapter grows too large, split it by concern (e.g., `user.repository.ts` vs `auth.repository.ts`).
+
+## 4. Event-Driven & Enterprise Integration Patterns
+
+### Message Types
+
+| Type | Purpose | Example |
+| :--- | :--- | :--- |
+| **Command** | Request an action (imperative, single consumer) | `DeployService`, `ScaleReplicas` |
+| **Event** | Notify that something happened (past tense, fan-out) | `ServiceDeployed`, `AnomalyDetected` |
+| **Document** | Transfer state snapshot for downstream consumption | Telemetry payload, event conversation log |
+
+### Coordination Patterns
+
+* **Choreography** (preferred): Services react to events independently. No central coordinator. Use when coupling between steps is low.
+* **Orchestration** (Saga): A central coordinator directs the workflow. Use when steps have ordering constraints, compensating actions, or approval gates.
+* **Hub and Spoke**: A central broker (message bus, API gateway) mediates all routing between services. Spokes are decoupled from each other -- they only know the hub. Use when centralized message transformation, routing rules, or protocol bridging is needed.
+
+### Reliability Invariants
+
+* **Idempotency**: Every message handler MUST be idempotent. Use idempotency keys (event ID, correlation ID) to deduplicate. Assume at-least-once delivery.
+* **Dead Letter Queue (DLQ)**: Messages that fail processing after N retries MUST be routed to a DLQ. Never silently drop messages.
+* **Back-Pressure**: Producers MUST respect consumer capacity. Use bounded queues, rate limiting, or reactive streams. A fast producer overwhelming a slow consumer is a system failure.
+* **Poison Pill Protection**: Validate message schema before processing. Malformed messages go to DLQ, not retry loops.
+
+### Schema Evolution
+
+* **Contract-First**: Define message schemas (protobuf, JSON Schema, TypeScript interfaces) BEFORE implementation.
+* **Backward Compatibility**: New fields are optional. Consumers MUST tolerate unknown fields. Never remove or rename fields in a published schema -- deprecate and add new ones.
+* **Versioning**: Use explicit version fields in message envelopes when breaking changes are unavoidable.
+
+## 5. Architect Workflow
+
+When reviewing microservice code, evaluate:
+
+1. **Coupling**: Is this service "leaking" its internal logic or database schema to another?
+2. **Error Propagation**: Is a failure in a "Driven Port" (external API) handled with a retry or a fallback, or does it cause a "Controller" failure?
+3. **Deployability**: Does the file structure support an independent build and containerization?
+
+*Reference: [Continuous Delivery](https://continuousdelivery.com/), [Hexagonal Architecture](https://alistair.cockburn.us/hexagonal-architecture/), [Enterprise Integration Patterns](https://www.enterpriseintegrationpatterns.com/)*

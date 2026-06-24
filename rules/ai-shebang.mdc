@@ -1,0 +1,23 @@
+---
+description: Enforce AI Shebang headers in all code files.
+globs: "**/*.{ts,js,py,java,go,rb,cs,php}"
+alwaysApply: true
+---
+
+# AI Shebang Rule
+
+## 1. Context Injection
+Every time you read or edit a file, you MUST first look for the "AI Shebang" block comment at the very top.
+- **Format:** It starts with `// @ai-rules:` or `/* @ai-rules:` depending on the language.
+- **Action:** Read these rules *before* writing any code. They are strict constraints for this specific file (e.g., "No external deps", "Use snake_case", "Pure functions only").
+
+## 2. Maintenance (The "Gardener" Logic)
+If you are editing a file and it **does not** have an AI Shebang, or the logic has changed significantly:
+1. **Analyze** the file's current architectural patterns, "gotchas", and dependencies.
+2. **Generate/Update** the header at the top of the file.
+3. **Format:**
+   ```typescript
+   // @ai-rules:
+   // 1. [Constraint]: Only use React.memo for components in this file.
+   // 2. [Pattern]: All API calls must pass through the `useSecureFetch` hook.
+   // 3. [Gotcha]: This file runs on the server edge; do not use `window` object.

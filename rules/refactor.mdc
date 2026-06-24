@@ -1,0 +1,10 @@
+---
+description: "Before refactoring or splitting a codebase, create a documentation file describing all existing logic and functions to validate nothing is lost post-refactor."
+alwaysApply: true
+---
+
+# Refactoring Safety Rule
+
+When refactoring a codebase, application, or splitting a file into components, **before starting** create a documentation file that includes an extensive description of all the logic and functions that exist in the codebase before the refactor/split.
+
+This allows validation that no logic was missed post-refactoring.
