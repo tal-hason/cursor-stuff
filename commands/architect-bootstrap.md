@@ -8,9 +8,9 @@ Workers: **specialized scanners** in Step 5 (`readonly`) — **evidence only**. 
 
 **Ideation skills** (`ce-brainstorm`, `ce-ideate`, `ce-strategy`) run in the **main agent** in Step 2.5 — interactive, user-facing. Do not dispatch them as subagents.
 
-**You alone** merge findings, **write `architect-brief.canvas.tsx`**, and present the brief in chat.
+**You alone** merge findings, **write `architect-brief.canvas.tsx`**, present the brief in chat, and call `memory_store`.
 
-**Pipeline:** `commands/pipeline.md`.
+**Pipeline:** `commands/pipeline.md` (memory bookends).
 
 **Two lanes:** **WHERE** (workspace scan → canvas) + **WHAT** (ideation skills when intent is unclear). **Next:** `/create-plan` (HOW) — carries brainstorm requirements when present.
 
@@ -18,17 +18,32 @@ Workers: **specialized scanners** in Step 5 (`readonly`) — **evidence only**. 
 
 | Step | Who | Action | Gate |
 | :--- | :--- | :--- | :--- |
-| 1 | Main agent | **Bootstrap Context Brief** | Brief draft (sections 1–7) |
-| 1.5 | Main agent | **Intent gate + ideation lane** | User intent clear **or** requirements doc linked |
-| 2 | Main agent | **Skills + Scanner triage** | Panel table published |
-| 3 | Scanners (parallel) | Specialized subagents (`readonly`) | All returned — reports only |
-| 4 | Main agent | Merge scan + Jira discovery | Situational Awareness table ready |
-| 5 | Main agent | **Write `architect-brief.canvas.tsx`** | Canvas on disk — **not subagents** |
-| 6 | Main agent | Present situational awareness in chat | User sees brief + canvas path |
+| 1 | Main agent | **`memory_search` NOW** | Hits shown |
+| 2 | Main agent | **Bootstrap Context Brief** | Brief draft (sections 1–8) |
+| 2.5 | Main agent | **Intent gate + ideation lane** | User intent clear **or** requirements doc linked |
+| 3 | Main agent | **Skills + Scanner triage** | Panel table published |
+| 4 | Scanners (parallel) | Specialized subagents (`readonly`) | All returned — reports only |
+| 5 | Main agent | Merge scan + Jira discovery | Situational Awareness table ready |
+| 6 | Main agent | **Write `architect-brief.canvas.tsx`** | Canvas on disk — **not subagents** |
+| 7 | Main agent | Present situational awareness in chat | User sees brief + canvas path |
+| 8 | Main agent | **`memory_store` NOW** | Indexed |
 
 ---
 
-## Step 1: Bootstrap Context Brief
+## Step 1: Memory Recall (mandatory)
+
+Call `memory_search` **before any other work**:
+
+```
+query: workspace bootstrap, architecture, canvas brief, {repo or workspace name}
+limit: 5
+```
+
+Present hits with similarity > 0.6. Carry into Step 2 Prior Art.
+
+---
+
+## Step 2: Bootstrap Context Brief
 
 **Main agent only.** Apply **probe-before-assume**: read `README`, `AGENTS.md`, root manifests — do not guess stack or boundaries.
 
@@ -38,7 +53,7 @@ Workers: **specialized scanners** in Step 5 (`readonly`) — **evidence only**. 
 ### 1. User Intent
 ### 2. Starting Hypothesis
 ### 3. Scan Questions (numbered — scanners must answer each)
-### 4. Prior Art
+### 4. Prior Art (memory hits from Step 1)
 ### 5. Jira Discovery keywords (if applicable)
 ### 6. Workspace Type Signals
 - Primary kind: code repo | docs/coordination | platform/GitOps | monorepo | multi-root
@@ -55,21 +70,21 @@ Workers: **specialized scanners** in Step 5 (`readonly`) — **evidence only**. 
 - Link to `STRATEGY.md` at repo root if it exists
 ```
 
-**Gate:** Sections 1–3 and 6 complete before Step 1.5.
+**Gate:** Sections 1–3 and 6 complete before Step 2.5.
 
 ---
 
-## Step 1.5: Intent Gate & Ideation Lane
+## Step 2.5: Intent Gate & Ideation Lane
 
 **Main agent only.** Bootstrap answers **WHERE** (workspace reality). Compound-engineering ideation skills answer **WHAT** (scope, behavior, success criteria) when intent is not yet plan-ready.
 
-Read **`ce-brainstorm/SKILL.md`** Phase 0.2 (clarity assessment) before routing, if available.
+Read **`ce-brainstorm/SKILL.md`** Phase 0.2 (clarity assessment) before routing.
 
 ### Route (pick one)
 
 | Signal | Route | Action |
 | :--- | :--- | :--- |
-| **Clear intent** — acceptance criteria, bounded scope, or explicit "scan only" | **Skip ideation** | Finalize brief §1–2; proceed to Step 2 |
+| **Clear intent** — acceptance criteria, bounded scope, or explicit "scan only" | **Skip ideation** | Finalize brief §1–2; proceed to Step 3 |
 | **Vague intent** — "improve X", "explore", Disorder, missing §1 | **`ce-brainstorm`** | Read plugin skill; run interactive Q&A (one question per turn). Write or update `docs/brainstorms/{slug}-requirements.md` when durable handoff needed |
 | **No chosen direction** — "what should we build", "give me ideas" | **`ce-ideate` → `ce-brainstorm`** | Ideate produces ranked options in `docs/ideation/`; user picks one; brainstorm defines it |
 | **`STRATEGY.md` missing** on product/code repo with greenfield intent | **Flag only** | Note in brief + canvas; suggest `/ce-strategy` — do **not** block workspace scan |
@@ -80,13 +95,13 @@ Read **`ce-brainstorm/SKILL.md`** Phase 0.2 (clarity assessment) before routing,
 1. **Interactive skills stay in main agent** — do not Task-dispatch `ce-brainstorm` or `ce-ideate`.
 2. **Workspace-only bootstrap** — user says "bootstrap this repo" with no feature → skip brainstorm; scan only.
 3. **Lightweight when clear** — per `ce-brainstorm` Phase 0.2: if requirements already clear, confirm in 2–3 lines and skip long Q&A.
-4. **After ideation** — update brief §1 User Intent, §2 Hypothesis, §8 Requirements Anchor; scanners validate against §8 in Step 3.
+4. **After ideation** — update brief §1 User Intent, §2 Hypothesis, §8 Requirements Anchor; scanners validate against §8 in Step 4.
 
-**Gate:** §1 is actionable **or** §8 links a requirements doc before Step 2.
+**Gate:** §1 is actionable **or** §8 links a requirements doc before Step 3.
 
 ---
 
-## Step 2: Skills + Scanner Triage
+## Step 3: Skills + Scanner Triage
 
 **Main agent only.** Read applicable skills **before** dispatching scanners. Publish the scanner panel in chat.
 
@@ -95,9 +110,9 @@ Read **`ce-brainstorm/SKILL.md`** Phase 0.2 (clarity assessment) before routing,
 | Skill / plugin | Path | When to read | Inject into |
 | :--- | :--- | :--- | :--- |
 | **Probe before assume** | `skills/probe-before-assume/SKILL.md` | **Always** | Brief discipline + every scanner Task prompt |
-| **Cynefin sense-making** | `skills/cynefin-sense-making/SKILL.md` | **Always** | Brief §7 + Step 1.5 routing |
-| **Brainstorm (WHAT)** | Plugin `ce-brainstorm/SKILL.md` | Step 1.5 vague intent / Disorder | Main agent Q&A; `docs/brainstorms/` artifact → brief §8 |
-| **Ideate** | Plugin `ce-ideate/SKILL.md` | Step 1.5 no chosen direction | Before brainstorm; `docs/ideation/` → user picks → brainstorm |
+| **Cynefin sense-making** | `skills/cynefin-sense-making/SKILL.md` | **Always** | Brief §7 + Step 2.5 routing |
+| **Brainstorm (WHAT)** | Plugin `ce-brainstorm/SKILL.md` | Step 2.5 vague intent / Disorder | Main agent Q&A; `docs/brainstorms/` artifact → brief §8 |
+| **Ideate** | Plugin `ce-ideate/SKILL.md` | Step 2.5 no chosen direction | Before brainstorm; `docs/ideation/` → user picks → brainstorm |
 | **Strategy grounding** | Plugin `ce-strategy/SKILL.md` | `STRATEGY.md` exists or greenfield product | Read into brief §8; canvas Intent row |
 | **Canvas** | `skills-cursor/canvas/SKILL.md` | **Always** (before Step 6) | Canvas authoring rules |
 | **Platform design review** | `skills/platform-design-review/SKILL.md` | Platform/API/IaC/SDK/GitOps surface detected | Scanner **C** + canvas Platform Economics section |
@@ -110,9 +125,9 @@ Read each skill file; paste the **relevant checklist section** into matching sca
 
 | ID | `subagent_type` | Model | Lens |
 | :--- | :--- | :--- | :--- |
-| **A** | `ce-repo-research-analyst` | `claude-4.6-opus-max-thinking` | Structure, conventions, docs, call chains, boundaries (`very thorough`) |
+| **A** | `ce-repo-research-analyst` | `claude-sonnet-5-thinking-xhigh` | Structure, conventions, docs, call chains, boundaries (`very thorough`) |
 | **B** | `explore` | `gemini-3.1-pro` | Stack, CI/CD, dependencies, entrypoints (`medium` or `very thorough`) |
-| **C** | `ce-architecture-strategist` | `claude-4.6-opus-max-thinking` | Hexagonal boundaries, coupling, platform economics signals, long-term risks |
+| **C** | `ce-architecture-strategist` | `claude-sonnet-5-thinking-xhigh` | Hexagonal boundaries, coupling, platform economics signals, long-term risks |
 
 ### Conditional scanners (dispatch when signal matches)
 
@@ -135,14 +150,14 @@ Read each skill file; paste the **relevant checklist section** into matching sca
 
 ---
 
-## Step 3: Parallel Workspace Scan (WHERE)
+## Step 4: Parallel Workspace Scan (WHERE)
 
 **WAIT** for all scanners. **Subagents do NOT write Canvas or any files.**
 
 Each Task prompt MUST include:
 
-1. Full **Bootstrap Context Brief** (all sections from Step 1)
-2. **Skill addendum** — pasted checklist from Step 2 (probe, platform, etc. as applicable)
+1. Full **Bootstrap Context Brief** (all sections from Step 2)
+2. **Skill addendum** — pasted checklist from Step 3 (probe, platform, etc. as applicable)
 3. **Mission:** return markdown scan report only — **do not write files, do not create canvas**
 4. **Output contract:** tech stack, boundaries, files validated, gaps/risks, answers to Scan Questions; **validate brief §8 requirements against codebase** when present; compatibility agents use their plain-text score format
 
@@ -150,13 +165,13 @@ Each Task prompt MUST include:
 
 Per-scanner fallback (reasoning tier only for A/C/H/I):
 
-- A: `claude-4.6-opus-max-thinking` → `claude-4.6-sonnet-medium-thinking`
-- B: `gemini-3.1-pro` → `gpt-5.4-medium` → `composer-2.5`
-- C: `claude-4.6-opus-max-thinking` → `claude-4.6-sonnet-medium-thinking`
+- A: `claude-sonnet-5-thinking-xhigh` → `gemini-3.1-pro`
+- B: `gemini-3.1-pro` → `gpt-5.4-medium` → `composer-2.5-fast`
+- C: `claude-sonnet-5-thinking-xhigh` → `gemini-3.1-pro`
 
 ---
 
-## Step 4: Merge + Jira Discovery (WHERE + WHAT)
+## Step 5: Merge + Jira Discovery (WHERE + WHAT)
 
 **Main agent only.**
 
@@ -166,10 +181,9 @@ Per-scanner fallback (reasoning tier only for A/C/H/I):
 4. **Institutional learnings** — if **I** ran, surface applicable `docs/solutions/` hits in Prior Art for `/create-plan`.
 5. Build **Situational Awareness** data for Canvas (tables, stats, gaps).
 
-
 ---
 
-## Step 5: Write Canvas (main agent only)
+## Step 6: Write Canvas (main agent only)
 
 **Only the main agent** uses the Write tool for the canvas file. Scanners never reach this step.
 
@@ -191,15 +205,26 @@ Per-scanner fallback (reasoning tier only for A/C/H/I):
    - Jira discovery summary (if applicable)
    - Pipeline footer (`bootstrap → create-plan → pre-flight → …`; note if brainstorm doc is input to create-plan)
 
-**Gate:** File exists on disk before Step 6. Chat-only output is not sufficient.
+**Gate:** File exists on disk before Step 7. Chat-only output is not sufficient.
 
 ---
 
-## Step 6: Present in Chat
+## Step 7: Present in Chat
 
 Summarize: **intent & scope** (or requirements doc path), tech stack, boundaries, top risks, Jira findings, agent compatibility (if run), **Initial Cynefin read**, **absolute path to canvas**. Full brief in conversation — not only in the file.
 
 **Standing orders** (remainder of session): per `references/architect-brief-canvas.md`.
+
+---
+
+## Step 8: Index (mandatory)
+
+Call `memory_store` **after** canvas write:
+
+- `title`: `architect-brief-{workspace-slug}` or canvas filename
+- `content`: chat summary **plus** key canvas data (scores, top gaps, compatibility fixes)
+- `doc_type`: `canvas_brief`
+- `workspace`: current workspace path
 
 End with one of:
 - *"Bootstrap complete. Requirements at `{path}`. Run `/create-plan` when ready."* (when §8 doc exists)
@@ -210,6 +235,7 @@ End with one of:
 ## Anti-Patterns
 
 - Letting scanners or any subagent write `.canvas.tsx`
+- Skipping `memory_search` or `memory_store`
 - 3× generic `explore` with identical lens (use specialized panel)
 - Scanners without full Bootstrap Context Brief + skill addendum
 - Collapsing D–G compatibility checks into one prompt
@@ -217,7 +243,7 @@ End with one of:
 - Guessing workspace type without reading manifests/README
 - Dispatching `ce-brainstorm` / `ce-ideate` as subagents (main-agent interactive only)
 - Heavy scanning while User Intent is still Disorder with no §8 anchor
-- Skipping Step 1.5 when user presents a vague feature request
+- Skipping Step 2.5 when user presents a vague feature request
 
 ## Pipeline position
 

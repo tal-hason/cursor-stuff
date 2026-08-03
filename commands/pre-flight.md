@@ -2,9 +2,9 @@
 
 **Invoke via:** `/pre-flight`
 
-**You are the coordinator.** Execute Steps 1–5 in order yourself. Main agent owns the deliverable — see `commands/pipeline.md`.
+**You are the coordinator.** Execute Steps 1–6 in order yourself. Main agent owns the deliverable — see `commands/pipeline.md`.
 
-Spawn **3 `pre-flight` auditors** in Step 2 (`readonly: true`). You merge their output and author the unified report in **this** conversation.
+Spawn **3 `pre-flight` auditors** in Step 3 (`readonly: true`). You merge their output and author the unified report in **this** conversation.
 
 **Requires:** A `.plan.md` from `/create-plan` (path or @-mention).
 
@@ -14,11 +14,12 @@ Spawn **3 `pre-flight` auditors** in Step 2 (`readonly: true`). You merge their 
 
 | Step | Who | Action | Gate |
 | :--- | :--- | :--- | :--- |
-| 1 | Main agent | Build **Pre-Flight Context Package** | Full plan loaded — not an excerpt |
-| 2 | 3 auditors (parallel) | Dispatch `pre-flight` subagents | All auditors returned |
-| 3 | Main agent | Pessimistic merge + correlation | Report draft ready |
-| 4 | Main agent | Write `*-Pre-Flight-Review_*.md` | File on disk |
-| 5 | Main agent | Present dashboard | User sees confidence + path to green |
+| 1 | Main agent | **`memory_search` NOW** | Hits shown |
+| 2 | Main agent | Build **Pre-Flight Context Package** | Full plan loaded — not an excerpt |
+| 3 | 3 auditors (parallel) | Dispatch `pre-flight` subagents | All auditors returned |
+| 4 | Main agent | Pessimistic merge + correlation | Report draft ready |
+| 5 | Main agent | Write `*-Pre-Flight-Review_*.md` | File on disk |
+| 6 | Main agent | Present dashboard + **`memory_store` NOW** | User sees confidence + path to green |
 
 **Soft gate for `/execute-plan`:** ≥ 90% and not Stop → ready; otherwise Path to Green or user override (see `pipeline.md`).
 
@@ -26,7 +27,15 @@ Spawn **3 `pre-flight` auditors** in Step 2 (`readonly: true`). You merge their 
 
 ---
 
-## Step 1: Pre-Flight Context Package
+## Step 1: Memory Recall (mandatory)
+
+Call `memory_search` **before any other work** (see `pipeline.md`):
+
+`query`: pre-flight, plan name/slug, same feature/workspace · `limit: 5` · present hits > 0.6
+
+---
+
+## Step 2: Pre-Flight Context Package
 
 **Main agent only.** Read the plan file from disk. Build this package — auditors receive the **entire package**, not a summary.
 
@@ -47,6 +56,7 @@ Spawn **3 `pre-flight` auditors** in Step 2 (`readonly: true`). You merge their 
 - Files referenced in the plan (absolute paths)
 
 ### 4. Prior Art & Iteration History
+- Relevant `memory_search` hits from Step 1
 - **All prior** `*-Pre-Flight-Review_*.md` for this plan slug (summarize confidence trend)
 - If plan changed since last pre-flight: note what changed (diff summary or user statement)
 
@@ -54,37 +64,37 @@ Spawn **3 `pre-flight` auditors** in Step 2 (`readonly: true`). You merge their 
 Stress-test the plan above. Classify each step (Cynefin), score confidence, find gaps. Do not execute code.
 ```
 
-**Gate:** Package sections 1–3 complete before Step 2. Never dispatch auditors with only the user's last message or a plan excerpt.
+**Gate:** Package sections 1–3 complete before Step 3. Never dispatch auditors with only the user’s last message or a plan excerpt.
 
 ---
 
-## Step 2: Parallel Audits
+## Step 3: Parallel Audits
 
-**WAIT** for all auditors before Step 3.
+**WAIT** for all auditors before Step 4.
 
 Dispatch **3** `pre-flight` subagents in **one message**. `readonly: true`.
 
 | Auditor | Model | Thinking | Lens |
 | :--- | :--- | :--- | :--- |
-| **A** | `claude-4.6-opus-max-thinking` | Max | Cynefin + architecture depth, integration patterns |
-| **B** | `gemini-3.1-pro` | High | Gap analysis, missing context, plan completeness |
-| **C** | `Codex 5.3` | High | Contracts, platform abstractions, edge cases |
+| **A** | `claude-sonnet-5-thinking-xhigh` | High | Cynefin + architecture depth, integration patterns |
+| **B** | `gemini-3.1-pro` → `Cursor Grok 4.5` | High | Gap analysis, missing context, plan completeness |
+| **C** | `Claude Sonnet 5` → `Cursor Grok 4.5` | High | Contracts, platform abstractions, edge cases |
 
-**Optional security lane (4th auditor):** When the plan touches auth/authz, secrets, public endpoints, PII, or trust boundaries — dispatch **`ce-security-lens-reviewer`** in the **same message** (`readonly: true`, `claude-4.6-opus-max-thinking`). Mission: plan-level threat model gaps (not code audit). Findings merge into Gap Analysis and Path to Green.
+**Optional security lane (4th auditor):** When the plan touches auth/authz, secrets, public endpoints, PII, or trust boundaries — dispatch **`ce-security-lens-reviewer`** in the **same message** (`readonly: true`, `claude-sonnet-5-thinking-xhigh`). Mission: plan-level threat model gaps (not code audit). Findings merge into Gap Analysis and Path to Green.
 
-**Model policy:** Thinking-tier models only. No `composer-2.5-fast` or `gpt-5.3-codex-high-fast`.
+**Model policy:** Thinking-tier only. No `composer-2.5-fast` or `gpt-5.3-codex-high-fast`.
 
 ### Each Task prompt MUST include
 
-1. **Full Pre-Flight Context Package** (all 5 sections from Step 1)
+1. **Full Pre-Flight Context Package** (all 5 sections from Step 2)
 2. **Mission:** execute the `pre-flight` agent procedure; return structured Pre-Flight Dashboard only
 3. **Output contract:** per `agents/pre-flight.md` output format
 
-Per-auditor fallback: A → sonnet-high; B → gpt-5.4-medium → composer-2.5; C → sonnet-medium → gemini-3.1-pro.
+Per-auditor fallback: A → gemini-3.1-pro; B → gpt-5.4-medium → composer-2.5; C → gemini-3.1-pro → gpt-5.4-medium.
 
 ---
 
-## Step 3: Merge (Pessimistic)
+## Step 4: Merge (Pessimistic)
 
 | Rule | Policy |
 | :--- | :--- |
@@ -101,7 +111,7 @@ Produce **Auditor agreement matrix** (task × A/B/C × confidence).
 
 ---
 
-## Step 4: Write Report
+## Step 5: Write Report
 
 Path: `~/.cursor/plans/{plan-slug}-Pre-Flight-Review_YYYY-MM-DD_HHMM.md`
 
@@ -118,10 +128,11 @@ Required sections:
 
 ---
 
-## Step 5: Present
+## Step 6: Present and Index
 
 1. **Paste the full Pre-Flight Dashboard in this conversation.**
-2. State outcome (no pushback on re-runs):
+2. Call `memory_store` **NOW**: `title` = report filename, `content` = **full report body**, `doc_type: preflight`, `workspace` = current path.
+3. State outcome (no pushback on re-runs):
    - *"Confidence {N}%. Run #{K} for this plan. {Ready → `/execute-plan` | Caution/Stop → Path to Green below; update plan and `/pre-flight` again anytime}."*
 
 ---
@@ -148,6 +159,8 @@ Required sections:
 - Averaging confidence scores
 - Discarding a gap because only one auditor found it
 - Deliverable only in subagent thread
+- Skipping `memory_search` or `memory_store`
+- Pushback when user re-runs `/pre-flight`
 
 ## Pipeline position
 

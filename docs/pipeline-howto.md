@@ -18,7 +18,7 @@ Each command feeds into the next. You can enter the pipeline at any point, but e
 | `/pre-flight` | **Agent** or **Plan** | Audits the plan for risks, gaps, and feasibility. Iterative -- run as many times as needed. | Timestamped review with confidence % |
 | `/execute-plan` | **Agent** | Implements the plan step by step. Soft gate: needs pre-flight >= 90%. | Code changes + execution outcome |
 | `/codereview` | **Agent** | Multi-reviewer panel checks the diff against the plan and coding standards. | Merged review report |
-| `/eop` | **Agent** | Extracts session learnings into `AGENTS.md` and compresses context into a session digest for future sessions. | Session digest + AGENTS.md delta |
+| `/eop` | **Agent** | Updates project docs, checks Jira tracking, extracts session learnings into `AGENTS.md`, and compresses context into a session digest. | Session digest + AGENTS.md delta + docs/Jira updates |
 
 ### Choosing the Right Mode
 
@@ -194,9 +194,11 @@ Run after execution completes. Reviews the diff.
 
 Run after code review passes. Closes the pipeline.
 
+- **Doc Updates**: reviews and updates task folder READMEs, workspace tracking docs, and code repo docs with session outcomes (issue keys, MR URLs, status changes)
+- **Jira Check**: asks whether the work is tracked in Jira — offers to update an existing issue, create a new one, or skip
 - **Continual Learning**: mines the session for durable learnings (preferences, workspace facts, workflow patterns, anti-patterns) and appends them to `AGENTS.md`
 - **Context Compression**: writes a session digest summarizing pipeline stages completed, key decisions, artifacts produced, and open threads
-- Writes the digest to disk so the next session can reference it
+- Stores the digest in Cursor memory so the next session can recall it
 - This is the terminal stage -- no further commands follow
 
 **Tip:** Even if you didn't run the full pipeline, `/eop` works after any partial run. It captures whatever learnings the session produced.
@@ -267,7 +269,7 @@ This gives the agent a clean context window with a sharp, well-defined intent. F
 
 - **Session 1 gets noisy.** Exploration generates a long context with false starts, tangents, and evolving understanding. That's valuable for learning but counterproductive for execution.
 - **Session 2 starts clean.** The feature prompt distills everything Session 1 discovered into a focused starting point. The agent doesn't inherit noise -- it inherits intent.
-- **Artifacts bridge the gap.** The bootstrap canvas, brainstorm docs, and plans from Session 1 persist on disk. Session 2's `/architect-bootstrap` reads them from the plans folder.
+- **Memory bridges the gap.** The bootstrap canvas and brainstorm docs from Session 1 are stored in Cursor memory. Session 2's `/architect-bootstrap` recalls them automatically.
 
 ---
 
@@ -277,4 +279,4 @@ This gives the agent a clean context window with a sharp, well-defined intent. F
 2. **Pre-flight is iterative.** Run it multiple times. Each run produces a new timestamped report. The agent uses the latest one.
 3. **Override gates when needed.** The 90% pre-flight gate is soft -- you can tell the agent to proceed anyway.
 4. **Commands chain in one session.** Run the whole pipeline in a single chat, or spread across sessions (memory carries context).
-5. **Artifacts persist.** Each command writes its output to `~/.cursor/plans/`. Starting a new session? The agent reads prior bootstraps, plans, and reviews from disk.
+5. **Memory persists.** Each command stores its output in Cursor memory. Starting a new session? The agent recalls prior bootstraps, plans, and reviews.

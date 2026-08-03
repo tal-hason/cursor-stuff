@@ -2,9 +2,9 @@
 
 **Invoke via:** `/execute-plan`
 
-**You are the coordinator.** Execute Steps 1–5 in order yourself. Main agent owns status and todo sync — see `commands/pipeline.md`.
+**You are the coordinator.** Execute Steps 1–6 in order yourself. Main agent owns status and todo sync — see `commands/pipeline.md`.
 
-Spawn **one** `execute-plan` worker in Step 3 with the full **Execution Context Package**. You present status in **this** conversation and update plan todo visibility.
+Spawn **two workers in parallel** in Step 4 — `execute-plan` (code) and `execute-plan-tests` (tests) — both with the full **Execution Context Package**. You present status in **this** conversation, run reconciliation, and update plan todo visibility.
 
 **Requires:** `{slug}.plan.md` and ideally a latest `*-Pre-Flight-Review_*.md` (see `commands/pipeline.md` — soft gate).
 
@@ -14,15 +14,25 @@ Spawn **one** `execute-plan` worker in Step 3 with the full **Execution Context 
 
 | Step | Who | Action | Gate |
 | :--- | :--- | :--- | :--- |
-| 1 | Main agent | Load plan + **latest** pre-flight report | Execution Context Package built |
-| 2 | Main agent | Gate 0 (soft) | User informed; override OK |
-| 3 | Executor | Dispatch `execute-plan` with full package | Worker completes or pauses on blockers |
-| 4 | Main agent | Sync plan frontmatter todos | Status table in chat |
-| 5 | Main agent | Outcome file + present | User sees todo progress |
+| 1 | Main agent | **`memory_search` NOW** | Hits shown |
+| 2 | Main agent | Load plan + **latest** pre-flight report | Execution Context Package built |
+| 3 | Main agent | Gate 0 (soft) | User informed; override OK |
+| 4 | Executor + Test Writer | Dispatch **both agents in parallel** with full package | Both complete or pause on blockers |
+| 5 | Main agent | **Reconciliation** — run tests against code | Pass/fail table in chat |
+| 6 | Main agent | Sync plan frontmatter todos | Status table in chat |
+| 7 | Main agent | Outcome file + **`memory_store` NOW** | User sees todo progress |
 
 ---
 
-## Step 1: Execution Context Package
+## Step 1: Memory Recall (mandatory)
+
+Call `memory_search` **before any other work** (see `pipeline.md`):
+
+`query`: execution outcome, plan slug, repo · `limit: 5` · present hits > 0.6
+
+---
+
+## Step 2: Execution Context Package
 
 Read from disk:
 
@@ -50,17 +60,18 @@ Read from disk:
 - Next actionable todo id
 
 ### 5. Prior Art
+- Memory hits from Step 1
 - Prior execution outcomes for this plan
 
 ### 6. Mission
 Implement approved plan step by step. Update plan frontmatter todos. Spawn `probe-runner` only for Complex/probe steps. Propose commit messages. Do not skip verification.
 ```
 
-**Gate:** Sections 1–2 complete before Step 3.
+**Gate:** Sections 1–2 complete before Step 4.
 
 ---
 
-## Step 2: Gate 0 (Soft — No Pushback)
+## Step 3: Gate 0 (Soft — No Pushback)
 
 Using the **latest** pre-flight report:
 
@@ -75,31 +86,65 @@ Iterative pre-flight is **expected**. Never block the user from running `/pre-fl
 
 ---
 
-## Step 3: Dispatch Executor
+## Step 4: Dispatch Executor + Test Writer (Parallel)
 
-One Task call: `subagent_type: execute-plan`.
+**Two Task calls in one message.** Both agents receive the **entire Execution Context Package** (all 6 sections).
 
-Prompt MUST include the **entire Execution Context Package** (all 6 sections) + instruction to follow `agents/execute-plan.md`.
+| Agent | `subagent_type` | Agent doc | Mission |
+| :--- | :--- | :--- | :--- |
+| **Code Executor** | `execute-plan` | `agents/execute-plan.md` | Implement plan steps — write production code |
+| **Test Writer** | `execute-plan-tests` | `agents/execute-plan-tests.md` | Write tests from Step 7 Test Specification — independently |
 
-For **Complex** steps, executor may spawn `probe-runner` (background) with probe plan path — main agent tracks blocked todos.
+### Dispatch rules
 
-**WAIT** for executor to finish or report blocked state before Step 4.
+1. Both dispatched in the **same message** (parallel).
+2. Both receive the **full Execution Context Package** — identical input, different missions.
+3. The Test Writer prompt MUST include: *"You are running in parallel with a code executor. Do not write implementation code. Write tests from the plan's Test Specification table only."*
+4. For **Complex** steps, executor may spawn `probe-runner` — test writer skips those rows (flags as "pending probe").
+
+**WAIT** for **both** agents to finish or report blocked state before Step 5.
 
 ---
 
-## Step 4: Sync Plan Todos
+## Step 5: Reconciliation (TDD Gate)
+
+After both agents complete, the main agent runs the project's test suite against the combined output:
+
+| Check | Command | Expected |
+| :--- | :--- | :--- |
+| Test syntax | lint / typecheck on test files | pass |
+| Test execution | project test runner | pass (or known-failing with reason) |
+| Coverage map | test writer's report vs plan spec table | every spec row covered |
+
+### Reconciliation outcomes
+
+| Outcome | Action |
+| :--- | :--- |
+| **All tests pass** | Tests validate implementation. Proceed to Step 6. |
+| **Tests fail — implementation bug** | Fix in code (minor), or flag as executor gap for `/codereview`. |
+| **Tests fail — test targets wrong interface** | Test writer assumed a different API shape. Adjust tests to match actual implementation. Note the divergence — it signals plan ambiguity. |
+| **Spec rows uncovered** | Test writer flagged gaps. Decide: add tests now, or carry as known gaps into `/codereview`. |
+
+**Report divergences in chat.** Divergence between test writer and executor is valuable signal — it means the plan's specification was ambiguous at that point. The codereview step should evaluate whether the plan or the implementation needs correction.
+
+---
+
+## Step 6: Sync Plan Todos
 
 Ensure `~/.cursor/plans/{slug}.plan.md` frontmatter reflects actual todo statuses from execution.
 
 ---
 
-## Step 5: Present
+## Step 7: Present and Index (mandatory)
 
-1. Write `~/.cursor/plans/{slug}-execution-outcome_YYYY-MM-DD_HHMM.md` (todo table, commits, blockers, next steps).
+1. Write `~/.cursor/plans/{slug}-execution-outcome_YYYY-MM-DD_HHMM.md` (todo table, commits, blockers, next steps, **reconciliation results**).
 2. **Todo status table** in this conversation.
-3. End with:
-   - All completed → *"Run `/codereview`."*
+3. **Reconciliation summary** — tests passed/failed/diverged, spec coverage.
+4. Call `memory_store` **NOW**: `title` = outcome filename, `content` = **full outcome file body**, `doc_type: execution`, `workspace` = current path.
+5. End with:
+   - All completed + tests pass → *"Run `/codereview`."*
    - Blocked on probes → *"Run `/execute-plan` again when probes complete."*
+   - Reconciliation failures unresolved → *"Fix divergences, then run `/codereview`."*
    - Plan gaps found → *"Update plan, optionally `/pre-flight`, then `/execute-plan` again."*
 
 ---
@@ -111,6 +156,12 @@ Ensure `~/.cursor/plans/{slug}.plan.md` frontmatter reflects actual todo statuse
 - Refusing execution because an older pre-flight failed (use latest only)
 - Deliverable only in executor subagent thread
 - Skipping plan frontmatter todo updates
+- Skipping `memory_search` or `memory_store`
+- Dispatching only the code executor without the test writer (both are mandatory)
+- Sharing implementation code with the test writer (defeats independent specification)
+- Skipping reconciliation when tests fail ("they'll fix it in review")
+- Silently adjusting tests to match implementation without noting the divergence
+- Test writer and executor dispatched sequentially instead of in parallel
 
 ## Pipeline position
 
@@ -119,5 +170,5 @@ Ensure `~/.cursor/plans/{slug}.plan.md` frontmatter reflects actual todo statuse
 | 1 | `/architect-bootstrap` | main agent (+ scan panel) |
 | 2 | `/create-plan` | main agent (+ evidence explorers) |
 | 3 | `/pre-flight` | main agent (+ `pre-flight` auditors, iterative) |
-| 4 | `/execute-plan` | **main agent** (+ `execute-plan` executor) |
+| 4 | `/execute-plan` | **main agent** (+ `execute-plan` executor + `execute-plan-tests` test writer) |
 | 5 | `/codereview` | main agent (+ `codereview` reviewers) |

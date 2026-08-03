@@ -12,25 +12,37 @@ The only subagents you may spawn are the **3 evidence explorers** in Step 3 (`re
 
 | Step | Who | Action | Gate before next step |
 | :--- | :--- | :--- | :--- |
-| 1 | Main agent | Write **Exploration Design Brief** + Mermaid map | Brief complete — ready to attach to explorer prompts |
-| 2 | 3 explorers (parallel) | Dispatch A, B, C via Task tool | **All 3 completed** (or A+C if 2-model fallback) |
-| 3 | Main agent | Merge evidence + validation checklist | No unresolved contradictions (or user resolved) |
-| 4 | Main agent | Implementation strategy | Strategy cites merged evidence |
-| 5 | Main agent | Atomic execution steps + probe templates | Every affected file has a step |
-| 6 | Main agent | Verification / Definition of Done | DoD covers all major changes |
-| 7 | Main agent | Write `.plan.md`, present full plan | User can review in this chat |
+| 1 | Main agent | **`memory_search` NOW** + present hits | Hits shown (or "none above 0.6") |
+| 2 | Main agent | Write **Exploration Design Brief** + Mermaid map | Brief complete — ready to attach to explorer prompts |
+| 3 | 3 explorers (parallel) | Dispatch A, B, C via Task tool | **All 3 completed** (or A+C if 2-model fallback) |
+| 4 | Main agent | Merge evidence + validation checklist | No unresolved contradictions (or user resolved) |
+| 5 | Main agent | Implementation strategy | Strategy cites merged evidence |
+| 6 | Main agent | Atomic execution steps + probe templates | Every affected file has a step |
+| 7 | Main agent | Verification / Definition of Done | DoD covers all major changes |
+| 8 | Main agent | Write `.plan.md`, present full plan, **`memory_store` NOW** | User can review in this chat |
 
 **Next in pipeline (after user approves):** `/pre-flight` → `/execute-plan` → `/codereview`
 
-If `/architect-bootstrap` ran earlier in this session, load the situational awareness brief / canvas summary into Step 1. If bootstrap produced a requirements anchor (`docs/brainstorms/*-requirements.md` or brief §8), treat it as the primary input for §1 Problem & Goals — do not re-invent scope.
+---
+
+## Step 1: Memory Recall (mandatory)
+
+Call `memory_search` **before any other work** (see `pipeline.md` Memory contract):
+
+- query: technical plan, evidence, same workspace or feature area as the user request
+- limit: 5
+
+Present hits when similarity > 0.6. If none qualify, state that explicitly. Carry relevant hits into explorer prompts and the final plan's context section.
+
+If `/architect-bootstrap` ran earlier in this session, load the situational awareness brief / canvas summary into Step 2. If bootstrap produced a requirements anchor (`docs/brainstorms/*-requirements.md` or brief §8), treat it as the primary input for §1 Problem & Goals — do not re-invent scope.
 
 ---
 
-## Step 1: Exploration Design Brief
+## Step 2: Exploration Design Brief
 
 **Main agent only** — author this **before** dispatching explorers. Do not forward the raw user prompt as the exploration input.
 
-Synthesize the user request and your architectural read into a **Summarized Design Plan for Exploration**. Explorers use this brief to validate, refute, and enrich — not to infer intent from a one-liner.
+Synthesize the user request, memory hits (Step 1), and your architectural read into a **Summarized Design Plan for Exploration**. Explorers use this brief to validate, refute, and enrich — not to infer intent from a one-liner.
 
 ### Required brief structure
 
@@ -71,17 +83,17 @@ Synthesize the user request and your architectural read into a **Summarized Desi
 
 ---
 
-## Step 2: Evidence-Gathering Exploration
+## Step 3: Evidence-Gathering Exploration
 
-**WAIT:** Do not start Step 3 until all dispatched explorers have returned.
+**WAIT:** Do not start Step 4 until all dispatched explorers have returned.
 
 Dispatch **3 explorers** in **one message** (parallel). Each row is fixed — never reuse the same `subagent_type` or model.
 
 | Explorer | `subagent_type` | Model | Thinking | Cadence | Lens |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **A — Deep trace** | `ce-repo-research-analyst` | `claude-4.6-opus-max-thinking` | Max | Slow, exhaustive | Repo structure, conventions, full-file reads, call chains, transitive consumers |
-| **B — Reasoned scout** | `explore` | `gemini-3.1-pro` | High | Parallel breadth | Hypothesis-driven discovery, entrypoints, suspected-area sweep (`thoroughness: medium` or `very thorough`) |
-| **C — Probe & correctness** | `ce-correctness-reviewer` | `gpt-5.4-medium` | Medium-high | Deliberate | Challenge assumptions, edge cases, contradictions; **read-only** probe checks (read tests/configs, dry commands — no writes) |
+| **B — Reasoned scout** | `explore` | `gemini-3.1-pro` → `Cursor Grok 4.5` | High | Parallel breadth | Hypothesis-driven discovery, entrypoints, suspected-area sweep (`thoroughness: medium` or `very thorough`) |
+| **C — Probe & correctness** | `ce-correctness-reviewer` | `Claude Sonnet 5` → `Cursor Grok 4.5` | Medium-high | Deliberate | Challenge assumptions, edge cases, contradictions; **read-only** probe checks (read tests/configs, dry commands — no writes) |
 
 **Model policy:** Thinking-tier models only. Do NOT use `composer-2.5-fast`, `gpt-5.3-codex-high-fast`, or other speed-optimized models.
 
@@ -90,17 +102,17 @@ Dispatch **3 explorers** in **one message** (parallel). Each row is fixed — ne
 1. One message, 3 Task calls, `readonly: true` on each.
 2. Pass `model` explicitly (never `inherit` for explorers).
 3. Per-explorer fallback (reasoning tier only, keep type + cadence):
-   - A: `claude-4.6-opus-max-thinking` → `claude-4.6-sonnet-medium-thinking`
+   - A: `claude-4.6-opus-max-thinking` → `claude-sonnet-5-thinking-xhigh`
    - B: `gemini-3.1-pro` → `gpt-5.4-medium` → `composer-2.5`
-   - C: `gpt-5.4-medium` → `claude-4.6-sonnet-medium-thinking` → `gemini-3.1-pro`
+   - C: `claude-sonnet-5-thinking-xhigh` → `gpt-5.4-medium` → `gemini-3.1-pro`
 4. If only 2 reasoning models exist: dispatch **A + C** only; record missing explorer in the agreement matrix.
 ### Shared prompt payload (all explorers)
 
-Attach the **full Exploration Design Brief** from Step 1 as the primary input. Do not substitute a shortened user prompt.
+Attach the **full Exploration Design Brief** from Step 2 as the primary input. Do not substitute a shortened user prompt.
 
 Each Task prompt MUST include:
 
-1. **Exploration Design Brief** — entire document from Step 1 (all 7 sections)
+1. **Exploration Design Brief** — entire document from Step 2 (all 7 sections)
 2. **Mission statement** — one sentence: *"Validate, refute, and enrich this design brief with codebase evidence. Do not author the final plan."*
 3. **Output contract** — return only the structured evidence report (format below); no plan authoring
 
@@ -133,7 +145,7 @@ Per change area: Clear / Complicated / Complex + rationale.
 
 ---
 
-## Step 3: Merge Exploration Evidence
+## Step 4: Merge Exploration Evidence
 
 **Main agent only** — merge the three reports:
 
@@ -146,14 +158,14 @@ Per change area: Clear / Complicated / Complex + rationale.
 | Contradictions | Factual disagreements → **STOP**, present to user, wait for resolution |
 | Cynefin | Take the **more complex** classification when explorers disagree |
 
-### Evidence validation (required before Step 4)
+### Evidence validation (required before Step 5)
 
 - [ ] Every affected file was read by ≥1 explorer (not assumed)
 - [ ] Every `@ai-shebang` header captured
 - [ ] Every unknown listed explicitly
 - [ ] No unresolved contradictions (or user chose how to resolve)
 
-**Gate:** If contradictions remain unresolved, do not proceed to Steps 4–7.
+**Gate:** If contradictions remain unresolved, do not proceed to Steps 5–8.
 
 ### Explorer agreement matrix (produce here)
 
@@ -161,11 +173,11 @@ Per change area: Clear / Complicated / Complex + rationale.
 | :--- | :--- | :--- | :--- | :--- |
 | *(file, pattern, or assumption)* | agree / disagree / N/A | … | … | merged decision |
 
-Include this matrix in the final plan (Step 7).
+Include this matrix in the final plan (Step 8).
 
 ---
 
-## Step 4: Implementation Strategy
+## Step 5: Implementation Strategy
 
 Using merged evidence only:
 
@@ -175,13 +187,13 @@ Using merged evidence only:
 
 ---
 
-## Step 5: Atomic Execution Steps
+## Step 6: Atomic Execution Steps
 
 Numbered steps. Each must be:
 
 - **Isolated** — implementable and verifiable on its own where possible
 - **Specific** — e.g. "Update `UserService.ts` to handle null email", not "Fix bug"
-- **Evidence-linked** — cites file + `@ai-shebang` from Step 3
+- **Evidence-linked** — cites file + `@ai-shebang` from Step 4
 - **Cynefin-tagged** — Clear / Complicated / Complex
 - **Verification-defined** — build, test, or lint command that proves done
 
@@ -194,22 +206,55 @@ Numbered steps. Each must be:
 
 ---
 
-## Step 6: Verification (Definition of Done)
+## Step 7: Verification & Test Specification (Definition of Done)
 
-1. **Test cases** — 3 per major change (success, failure, edge)
-2. **Integration checks** — cross-service flows needing E2E verification
-3. **Visual check** — manual UI/log verification
-4. **Evidence coverage** — confirm Step 5 covers all explored files
+This section feeds **two consumers**: the executor (verification gates) and the **parallel test writer** agent in `/execute-plan`. Structure it so a test author can write tests from this section alone, without seeing the implementation.
+
+### 7a. Test Specification Table
+
+One row per testable behavior introduced or changed by the plan. The test writer agent uses this table as its primary input.
+
+```markdown
+| ID | Behavior Under Test | Module / Function / Endpoint | Input | Expected Output / Side Effect | Category |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| T-1 | (what should happen) | (target from affected files) | (sample input or condition) | (assertion) | unit / integration / e2e |
+| T-2 | (failure path) | ... | (invalid input or error condition) | (expected error / fallback) | unit |
+| T-3 | (edge case) | ... | (boundary condition) | (expected behavior) | unit |
+```
+
+**Rules:**
+- Minimum 3 rows per major change (success, failure, edge) — same as before, now structured
+- **Module / Function / Endpoint** must reference affected files from Step 6 evidence — gives the test writer a target without seeing implementation
+- **Category** determines test runner and isolation level
+- For new APIs: include request/response shapes in the Expected column
+- For refactors: include "behavior unchanged" regression rows
+
+### 7b. Test Infrastructure Notes
+
+- Existing test framework / runner (from explorer evidence)
+- Test file naming convention and location pattern
+- Mock/stub patterns already in use
+- Any test fixtures or factories available
+
+### 7c. Integration & Manual Checks
+
+1. **Integration checks** — cross-service flows needing E2E verification
+2. **Visual check** — manual UI/log verification
+
+### 7d. Evidence Coverage Gate
+
+- Confirm Step 6 covers all explored files
+- Confirm every affected file maps to ≥1 test specification row
 
 ---
 
-## Step 7: Write and Present the Plan
+## Step 8: Write and Present the Plan
 
-### 7a. Write file
+### 8a. Write file
 
 Path: `~/.cursor/plans/{feature-slug}.plan.md` (`feature-slug` = kebab-case from the feature name).
 
-YAML frontmatter — **one todo per atomic step** from Step 5:
+YAML frontmatter — **one todo per atomic step** from Step 6:
 
 ```yaml
 ---
@@ -226,19 +271,20 @@ isProject: false
 ---
 ```
 
-### 7b. Plan body (required sections)
+### 8b. Plan body (required sections)
 
-1. Mermaid architecture diagram (from Step 1, updated if merge changed scope)
+1. Mermaid architecture diagram (from Step 2, updated if merge changed scope)
 2. Merged evidence summary
-3. Explorer agreement matrix (from Step 3)
+3. Explorer agreement matrix (from Step 4)
 4. Implementation strategy
 5. Atomic execution steps (with probe templates for Complex)
-6. Verification plan (from Step 6)
+6. Verification & Test Specification (from Step 7 — includes test spec table)
 
-### 7c. Present in chat
+### 8c. Present and index (mandatory)
 
 1. **Paste the full plan in this conversation** — not only on disk, not only in subagent output.
-2. End with: *"Review the plan above. When approved, run `/pre-flight`."*
+2. Call `memory_store` **NOW**: `title` = plan filename, `content` = **full plan file body**, `doc_type: plan`, `workspace` = current path.
+3. End with: *"Review the plan above. When approved, run `/pre-flight`."*
 
 ---
 
@@ -248,7 +294,7 @@ isProject: false
 - Starting Step 4 before all explorers finish
 - Building on assumptions instead of explorer evidence
 - One explorer, or same `subagent_type` / model twice
-- Fast/non-thinking models for exploration
+- Fast/non-thinking models for exploration or probe validation
 - Skipping `@ai-shebang` reads
 - Discarding a finding because only one explorer found it
 - "Affected" files without evidence of why
@@ -256,6 +302,7 @@ isProject: false
 - Complex steps without probe templates
 - Resolving contradictions silently without user visibility
 - Leaving the deliverable only in subagent context or only as a file path
+- Skipping `memory_search` or `memory_store`
 
 ## Pipeline position
 

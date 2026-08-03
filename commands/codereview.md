@@ -14,19 +14,28 @@ Spawn a **Review Panel** of specialized subagents in Step 5 (`readonly: true`). 
 
 | Step | Who | Action | Gate |
 | :--- | :--- | :--- | :--- |
-| 1 | Main agent | Scan diff + `@ai-shebang` on touched files | Modified file list |
-| 2 | Main agent | Build **Code Review Context Package** | Full plan + diff attached |
-| 3 | Main agent | **Review Panel triage** + read applicable skills | Panel table published |
-| 4 | Review panel (parallel) | Dispatch specialized reviewers | All returned |
-| 5 | Main agent | Pessimistic merge + correlation | Unified report draft |
-| 6 | Main agent | Verification gate (test, typecheck, build) | Pass or failures listed |
-| 7 | Main agent | Write report, present in chat | User sees merged review |
+| 1 | Main agent | **`memory_search` NOW** | Hits shown |
+| 2 | Main agent | Scan diff + `@ai-shebang` on touched files | Modified file list |
+| 3 | Main agent | Build **Code Review Context Package** | Full plan + diff attached |
+| 4 | Main agent | **Review Panel triage** + read applicable skills | Panel table published |
+| 5 | Review panel (parallel) | Dispatch specialized reviewers | All returned |
+| 6 | Main agent | Pessimistic merge + correlation | Unified report draft |
+| 7 | Main agent | Verification gate (test, typecheck, build) | Pass or failures listed |
+| 8 | Main agent | Write report, present in chat, **`memory_store` NOW** | User sees merged review |
 
 **Next (if clean):** push + Jira Dev Complete per plan/issue.
 
 ---
 
-## Step 1: Diff Scope
+## Step 1: Memory Recall (mandatory)
+
+Call `memory_search` **before any other work** (see `pipeline.md`):
+
+`query`: code review, plan slug, branch/feature · `limit: 5` · present hits > 0.6
+
+---
+
+## Step 2: Diff Scope
 
 1. Identify all modified files (`git diff --staged` or user scope).
 2. Read `@ai-shebang` on every touched file.
@@ -36,7 +45,7 @@ Spawn a **Review Panel** of specialized subagents in Step 5 (`readonly: true`). 
 
 ---
 
-## Step 2: Code Review Context Package
+## Step 3: Code Review Context Package
 
 **Main agent only.** Read the original `.plan.md` from disk if available.
 
@@ -58,17 +67,20 @@ Spawn a **Review Panel** of specialized subagents in Step 5 (`readonly: true`). 
 - Hexagonal layer per file (Domain / Port / Adapter / Infrastructure)
 
 ### 4. Consumer Map (initial)
-- Callers/consumers from Step 1
+- Callers/consumers from Step 2
 
-### 5. Review Mission
+### 5. Prior Art
+- Memory hits from Step 1
+
+### 6. Review Mission
 Review changes against plan intent. System-wide impact, contracts, zero deferred debt. Do not rubber-stamp.
 ```
 
-**Gate:** Sections 1–3 complete before Step 4.
+**Gate:** Sections 1–3 complete before Step 5.
 
 ---
 
-## Step 3: Review Panel Triage
+## Step 4: Review Panel Triage
 
 **Main agent only.** Select reviewers from the tables below. Publish the panel in chat before dispatching.
 
@@ -81,17 +93,17 @@ Review changes against plan intent. System-wide impact, contracts, zero deferred
 | Plugin: `pf-coding-standards` | PatternFly React imports / tokens | `ce-pattern-recognition-specialist` |
 | Plugin: `pf-unit-test-standards` | PatternFly unit test changes | `ce-testing-reviewer` |
 
-Read each skill file; paste the **relevant test/checklist section** into the matching reviewer Task prompt (not the whole skill).
+Read the skill file; paste the **relevant test/checklist section** into the matching reviewer Task prompt (not the whole skill).
 
 ### Core panel (always dispatch)
 
 | ID | `subagent_type` | Model | Lens |
 | :--- | :--- | :--- | :--- |
-| **R1** | `codereview` | `claude-4.6-opus-max-thinking` | Principal review — architecture, contracts, downstream impact (`agents/codereview.md`) |
+| **R1** | `codereview` | `claude-sonnet-5-thinking-xhigh` | Principal review — architecture, contracts, downstream impact (`agents/codereview.md`) |
 | **R2** | `ce-correctness-reviewer` | `gemini-3.1-pro` | Logic, edge cases, state bugs |
 | **R3** | `ce-maintainability-reviewer` | `gpt-5.4-medium` | Structure, coupling, naming, complexity |
-| **R4** | `code-reviewer` | `claude-4.6-sonnet-medium-thinking` | **Plan alignment** — implementation vs plan todos & evidence (skip only if no plan) |
-| **R5** | `ce-security-reviewer` | `claude-4.6-opus-max-thinking` | **Exploitable diff security** — auth/authz, injection, input validation, IDOR, SSRF, path traversal in changed code |
+| **R4** | `code-reviewer` | `claude-sonnet-5-thinking-xhigh` | **Plan alignment** — implementation vs plan todos & evidence (skip only if no plan) |
+| **R5** | `ce-security-reviewer` | `claude-sonnet-5-thinking-xhigh` | **Exploitable diff security** — auth/authz, injection, input validation, IDOR, SSRF, path traversal in changed code |
 | **R6** | `ce-security-sentinel` | `gemini-3.1-pro` | **Security audit** — secrets/credentials in diff, OWASP patterns, unsafe crypto, dependency CVE surface, sensitive data in logs |
 
 **Security core is mandatory** for every `/codereview` after `/execute-plan`. Only skip R5+R6 if the diff is **docs-only** (markdown, comments, no executable/config-IaC changes) — state that explicitly in the triage table.
@@ -100,19 +112,19 @@ Read each skill file; paste the **relevant test/checklist section** into the mat
 
 | ID | `subagent_type` | Model | Trigger |
 | :--- | :--- | :--- | :--- |
-| **C1** | `ce-testing-reviewer` | `gpt-5.4-medium` | Tests changed or production logic without test updates |
+| **C1** | `ce-testing-reviewer` | `gpt-5.4-medium` | **Mandatory after `/execute-plan`** (TDD gate). Also triggers on: tests changed or production logic without test updates |
 | **C2** | `ce-api-contract-reviewer` | `gemini-3.1-pro` | API routes, types, serialization, exported signatures |
-| **C4** | `ce-reliability-reviewer` | `claude-4.6-sonnet-medium-thinking` | Retries, timeouts, jobs, error handling, async handlers |
+| **C4** | `ce-reliability-reviewer` | `Claude Sonnet 5` | Retries, timeouts, jobs, error handling, async handlers |
 | **C5** | `ce-performance-reviewer` | `gemini-3.1-pro` | Queries, loops, caching, I/O-heavy paths |
-| **C6** | `ce-adversarial-reviewer` | `claude-4.6-opus-max-thinking` | Diff ≥ 50 lines OR auth/payments/data-mutation paths |
-| **C7** | `ce-data-integrity-guardian` | `gpt-5.4-medium` | Migrations, models, persistent data constraints |
+| **C6** | `ce-adversarial-reviewer` | `claude-sonnet-5-thinking-xhigh` | Diff ≥ 50 lines OR auth/payments/data-mutation paths |
+| **C7** | `ce-data-integrity-guardian` | `Claude Sonnet 5` | Migrations, models, persistent data constraints |
 | **C8** | `ce-data-migration-reviewer` | `gpt-5.4-medium` | Migration files, schema dumps, backfills |
 | **C9** | `ce-julik-frontend-races-reviewer` | `gemini-3.1-pro` | Async UI, Stimulus/Turbo, DOM timing |
-| **C10** | `ce-swift-ios-reviewer` | `claude-4.6-sonnet-medium-thinking` | Swift, SwiftUI, iOS project files |
-| **C11** | `ce-architecture-strategist` | `claude-4.6-opus-max-thinking` | New services, large refactors, cross-boundary changes |
+| **C10** | `ce-swift-ios-reviewer` | `Claude Sonnet 5` | Swift, SwiftUI, iOS project files |
+| **C11** | `ce-architecture-strategist` | `claude-sonnet-5-thinking-xhigh` | New services, large refactors, cross-boundary changes |
 | **C12** | `ce-project-standards-reviewer` | `gpt-5.4-medium` | Any change — project `AGENTS.md` / conventions |
 | **C13** | `ce-pattern-recognition-specialist` | `gemini-3.1-pro` | New abstractions or inconsistent patterns suspected |
-| **C14** | `component-structure-audit` | `gpt-5.4-medium` | PatternFly layout / hierarchy changes |
+| **C14** | `component-structure-audit` | `Claude Sonnet 5` | PatternFly layout / hierarchy changes |
 | **C15** | `pf-coding-standards` | `gpt-5.4-medium` | PatternFly React code |
 | **C16** | `pf-unit-test-standards` | `gpt-5.4-medium` | PatternFly RTL tests |
 
@@ -124,23 +136,24 @@ Read each skill file; paste the **relevant test/checklist section** into the mat
 
 ---
 
-## Step 4: Parallel Reviews
+## Step 5: Parallel Reviews
 
-**WAIT** for all panel members before Step 5.
+**WAIT** for all panel members before Step 6.
 
 One message, one Task per panel member, `readonly: true`.
 
 ### Each Task prompt MUST include
 
-1. **Full Code Review Context Package** (all 5 sections)
+1. **Full Code Review Context Package** (all 6 sections)
 2. **Reviewer role** — ID + lens from triage table
 3. **Skill addendum** — pasted checklist from Step 4 (if applicable)
-4. **Mission:** return structured findings only (Summary, Downstream Impact, Findings table, Verification suggestions) — use `agents/codereview.md` output format as baseline
-5. **Flagged By:** reviewer must sign findings with their ID (R1, R5, C6, …)
+4. **TDD context (C1 only):** Include the plan's Step 7 Test Specification table + the reconciliation summary from `/execute-plan` outcome. C1 validates: (a) every spec row has a corresponding test, (b) tests assert on public interface not implementation details, (c) divergences noted in reconciliation are resolved or justified.
+5. **Mission:** return structured findings only (Summary, Downstream Impact, Findings table, Verification suggestions) — use `agents/codereview.md` output format as baseline
+6. **Flagged By:** reviewer must sign findings with their ID (R1, R5, C6, …)
 
 ---
 
-## Step 5: Merge (Pessimistic)
+## Step 6: Merge (Pessimistic)
 
 | Rule | Policy |
 | :--- | :--- |
@@ -163,26 +176,29 @@ One message, one Task per panel member, `readonly: true`.
 
 ---
 
-## Step 6: Verification Gate
+## Step 7: Verification Gate
 
 | Check | Command | Result |
 | :--- | :--- | :--- |
 | Unit tests | project test command | pass/fail |
 | Typecheck | tsc/mypy/etc. | pass/fail |
 | Build | npm run build / equivalent | pass/fail |
+| **Test spec coverage** | Compare test files vs plan Step 7a table | all spec rows covered / gaps listed |
+| **TDD divergence** | Review reconciliation summary from `/execute-plan` | resolved / unresolved items |
 
-Do NOT approve push if any check fails.
+Do NOT approve push if any check fails. Unresolved TDD divergences (test writer targeted a different interface than the executor implemented) must be resolved or explicitly accepted — they indicate plan ambiguity that should be documented.
 
 ---
 
-## Step 7: Write and Present
+## Step 8: Write, Present, Index
 
 Path: `~/.cursor/plans/{plan-slug}-Code_Review_YYYY-MM-DD_HHMM.md`
 
 Sections: Summary (panel list + models), Downstream Impact, Findings & Fixes (with **Flagged By** column), Reviewer Disagreements, Verification Plan, Verification Gate table.
 
 1. **Paste full report in this conversation.**
-2. If clean: push and close the review cycle.
+2. Call `memory_store` **NOW**: full report body, `doc_type: codereview`.
+3. If clean: offer Jira Dev Complete (discover transition ID — never hardcode).
 
 ---
 
@@ -193,6 +209,7 @@ Sections: Summary (panel list + models), Downstream Impact, Findings & Fixes (wi
 - Lowest severity wins
 - Skipping triage (always document which reviewers ran and why)
 - >10 parallel reviewers without prioritization
+- Skipping `memory_search` or `memory_store`
 
 ## Pipeline position
 

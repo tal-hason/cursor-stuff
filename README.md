@@ -14,25 +14,24 @@ This is a `.cursor` configuration package. Copy its contents into your `~/.curso
 ```
 cursor-public/
 ├── AGENTS.md                              # Pipeline memory (continual learning)
-├── commands/                              # 10 slash commands
+├── commands/                              # 9 slash commands
 │   ├── pipeline.md                        # Canonical pipeline contract
 │   ├── architect-bootstrap.md             # Step 1: workspace scan + canvas brief
 │   ├── create-plan.md                     # Step 2: evidence-backed plan
 │   ├── pre-flight.md                      # Step 3: confidence audit (iterative)
-│   ├── execute-plan.md                    # Step 4: implement plan
+│   ├── execute-plan.md                    # Step 4: implement plan (parallel TDD)
 │   ├── codereview.md                      # Step 5: multi-reviewer panel
 │   ├── eop.md                             # Step 6: session digest + learnings
 │   ├── uiux-expert.md                     # Standalone: UI/UX design orchestrator
-│   ├── generate-shebangs.md               # Standalone: AI Shebang header generator
-│   └── schedule-task.md                   # Standalone: task scheduler
+│   └── generate-shebangs.md               # Standalone: AI Shebang header generator
 ├── agents/                                # 7 worker subagent definitions
 │   ├── codereview.md                      # Principal code reviewer (R1)
 │   ├── pre-flight.md                      # Cynefin confidence auditor
-│   ├── execute-plan.md                    # Plan executor
+│   ├── execute-plan.md                    # Plan executor (production code)
+│   ├── execute-plan-tests.md              # Test writer (parallel TDD)
 │   ├── probe-runner.md                    # Safe-to-fail experiment runner
 │   ├── uiux-expert.md                     # UI/UX design orchestrator
-│   ├── generate-shebangs.md               # AI Shebang generator
-│   └── schedule-task.md                   # Task scheduler
+│   └── generate-shebangs.md               # AI Shebang generator
 ├── references/
 │   └── architect-brief-canvas.md          # Canvas structure for bootstrap
 ├── docs/
@@ -111,7 +110,7 @@ The agent scans the workspace, builds a canvas with situational awareness, then 
 1. **Session 1 (explore):** Run `/architect-bootstrap` to scan and understand the workspace. Brainstorm with the agent. Ask it to write a focused feature prompt.
 2. **Session 2 (execute):** Open a fresh chat. Paste the feature prompt into `/architect-bootstrap`. Run the full pipeline with clean context.
 
-Plans and canvases from Session 1 persist on disk for Session 2 to pick up.
+Memory bridges the gap — Session 1's canvas and brainstorm docs are stored via `memory_store` and recalled automatically by Session 2's `/architect-bootstrap`.
 
 ## Design principles
 
@@ -123,6 +122,7 @@ This pipeline is built on:
 - **[Continuous delivery](https://continuousdelivery.com/)** — small verifiable batches, build quality in
 - **[Platform Strategy](https://architectelevator.com/book/platformstrategy/)** (Gregor Hohpe) — 7 C's, Double Pyramid, abstractions not illusions
 - **Probe-before-assume** — never act on assumptions when evidence is available
+- **Parallel TDD** — independent test writer runs alongside the code executor; divergences signal plan ambiguity
 
 ## Excluded from this package
 
@@ -132,8 +132,9 @@ This is a sanitized extract. Internal/company-specific items not included:
 - GitLab internal rules (host aliases, repo group mappings)
 - OCP cluster login aliases
 - Bot MR description protocols
-- Company-specific skills (Jira integration, build audits)
+- Company-specific skills (Jira integration, build audits, memory MCP)
 - MCP server credentials (`mcp.json`)
+- Memory MCP hooks (auto-store, warm-up, sync)
 - Session hook for git config sync
 - `plans/` directory (generated artifacts)
 - `skills-cursor/` (Cursor-managed, auto-synced by the IDE)
