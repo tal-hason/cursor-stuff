@@ -35,7 +35,7 @@ Every pipeline command **MUST** call MCP `memory_search` as its first action and
         ▼  (Canvas brief + Jira discovery — optional)
 /create-plan
         │
-        ▼  (.plan.md)
+        ▼  (.plan.md + Jira issue created & plan attached)
 /pre-flight  ◄──┐  (iterative — run as many times as needed)
         │       │
         ▼       │  (update plan → re-run pre-flight)
@@ -53,11 +53,11 @@ Every pipeline command **MUST** call MCP `memory_search` as its first action and
 | # | Command | Actor | Workers | Primary deliverable |
 | :--- | :--- | :--- | :--- | :--- |
 | 1 | `/architect-bootstrap` | main agent | **WHAT:** `ce-brainstorm` / `ce-ideate` / `ce-strategy` (main agent, Step 2.5 when vague). **WHERE:** scanners A–C + optional D–G, H–K | Canvas + situational brief (+ optional `docs/brainstorms/` requirements) |
-| 2 | `/create-plan` | main agent | 3× evidence explorers | `{slug}.plan.md` |
+| 2 | `/create-plan` | main agent | 3× evidence explorers | `{slug}.plan.md` + Jira issue created/linked (plan attached) |
 | 3 | `/pre-flight` | main agent | 3× `pre-flight` auditors | `{slug}-Pre-Flight-Review_*.md` |
 | 4 | `/execute-plan` | main agent | 1× `execute-plan` executor + 1× `execute-plan-tests` test writer (parallel) | Updated plan todos + code changes + tests + reconciliation |
 | 5 | `/codereview` | main agent | Core R1–R6 (**R5/R6 security always** except docs-only) + conditional `ce-*` / PF auditors | `{slug}-Code_Review_*.md` |
-| 6 | `/eop` | main agent | None (terminal) | `{slug}-session-digest_*.md` + `AGENTS.md` delta |
+| 6 | `/eop` | main agent | None (terminal) | `{slug}-session-digest_*.md` + `AGENTS.md` delta + Jira issue updated/closed (MR linked) |
 
 ## Iteration rules
 
@@ -108,14 +108,14 @@ work complete → branch out → push branch → create PR/MR → merge post rev
 **Rules:**
 - Never push directly to `main`/`master` — always branch + PR/MR.
 - The `/codereview` step reviews the diff on the branch. Push happens after review passes.
-- `/eop` captures the PR/MR URL in the session digest and offers to update issue tracking.
+- Jira issue is created and plan attached during `/create-plan`; `/eop` captures the PR/MR URL, updates the Jira issue, and handles transition to Dev Complete/Closed.
 
 ## Command handoffs (end each stage with)
 
 | After command | CTA |
 | :--- | :--- |
 | `/architect-bootstrap` | *"Bootstrap complete. Run `/create-plan` when ready."* |
-| `/create-plan` | *"Review the plan above. When approved, run `/pre-flight`."* |
+| `/create-plan` | *"Plan written and attached to Jira issue {key}. Review the plan above. When approved, run `/pre-flight`."* |
 | `/pre-flight` | *"Confidence {N}%. Run #{K}. {Ready → `/execute-plan` \| else → Path to Green, edit plan, `/pre-flight` again}."* |
 | `/execute-plan` | *"Branch out and run `/codereview`"* (or re-run execute / pre-flight if blocked) |
 | `/codereview` | Push branch + create PR/MR if clean; then *"Run `/eop` to close the pipeline."* Else fix findings or loop to `/pre-flight` |

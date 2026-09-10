@@ -2,7 +2,7 @@
 
 **Invoke via:** `/create-plan`
 
-**You are the coordinator.** Execute Steps 1–8 in order yourself. Main agent owns the deliverable — see `commands/pipeline.md`.
+**You are the coordinator.** Execute Steps 1–9 in order yourself. Main agent owns the deliverable — see `commands/pipeline.md`.
 
 The only subagents you may spawn are the **3 evidence explorers** in Step 3 (`readonly: true`). You merge their output and author the final plan in **this** conversation.
 
@@ -19,7 +19,8 @@ The only subagents you may spawn are the **3 evidence explorers** in Step 3 (`re
 | 5 | Main agent | Implementation strategy | Strategy cites merged evidence |
 | 6 | Main agent | Atomic execution steps + probe templates | Every affected file has a step |
 | 7 | Main agent | Verification / Definition of Done | DoD covers all major changes |
-| 8 | Main agent | Write `.plan.md`, present full plan, **`memory_store` NOW** | User can review in this chat |
+| 8 | Main agent | **Jira tracking & plan attachment** | Issue created/linked, draft confirmed, `.plan.md` attached |
+| 9 | Main agent | Write `.plan.md`, present full plan, **`memory_store` NOW** | User can review in this chat with Jira link |
 
 **Next in pipeline (after user approves):** `/pre-flight` → `/execute-plan` → `/codereview`
 
@@ -248,18 +249,68 @@ One row per testable behavior introduced or changed by the plan. The test writer
 
 ---
 
-## Step 8: Write and Present the Plan
+## Step 8: Jira Tracking & Plan Attachment
 
-### 8a. Write file
+Verify Jira tracking and create/link the Jira issue upfront before plan presentation. Every technical plan originates with a real, tracked Jira issue.
+
+### Procedure
+
+1. **Ask the user:**
+
+   > "Should I track this plan in Jira? Create a new issue under an epic, link to an existing issue, or skip?"
+   >
+   > Options:
+   > - **Create new** — I'll draft a task/story under the appropriate epic
+   > - **Update existing** — provide the issue key (e.g., PROJ-XXXX) and I'll link this plan
+   > - **Skip** — no Jira tracking needed for this work
+
+2. **If "Create new":**
+   - Suggest parent epic: check `/architect-bootstrap` discovery or project epic hierarchy
+   - Draft summary + description:
+     - Summary: concise feature/bug description
+     - Description: ADF or Markdown including Problem & Goals, Merged Evidence, Atomic Execution Steps, and Definition of Done
+   - Discover required fields using project metadata before create
+   - Present draft for user confirmation before creating
+   - Create issue via Jira MCP or REST API (`POST /rest/api/3/issue`)
+   - Capture created issue key (e.g. `PROJ-12345`)
+
+3. **If "Update existing":**
+   - Fetch the issue via MCP / API to confirm it matches
+   - Add a comment with the plan overview and execution steps
+   - Capture issue key
+
+4. **If "Skip":**
+   - Record `jira: null` in frontmatter; proceed to Step 9
+
+5. **Attach Plan File to Jira Issue:**
+   - Once the issue key is established and `.plan.md` is drafted, attach the plan file (`~/.cursor/plans/{feature-slug}.plan.md`) to the Jira issue via Jira REST API v3:
+     ```bash
+     curl -D- \
+       -u "${JIRA_USERNAME}:${JIRA_API_TOKEN}" \
+       -X POST \
+       -H "X-Atlassian-Token: no-check" \
+       -F "file=@${PLAN_FILE_PATH}" \
+       "${JIRA_URL}/rest/api/3/issue/${ISSUE_KEY}/attachments"
+     ```
+     or script equivalent using multipart form-data.
+   - Confirm attachment response status (200/201).
+
+---
+
+## Step 9: Write and Present the Plan
+
+### 9a. Write file
 
 Path: `~/.cursor/plans/{feature-slug}.plan.md` (`feature-slug` = kebab-case from the feature name).
 
-YAML frontmatter — **one todo per atomic step** from Step 6:
+YAML frontmatter — **include linked Jira issue** + **one todo per atomic step** from Step 6:
 
 ```yaml
 ---
 name: feature-slug
 overview: One-line summary
+jira: PROJ-XXXX # or null if skipped
+jira_url: https://jira.example.com/browse/PROJ-XXXX # or null
 todos:
   - id: step-1
     content: "[Clear] Specific atomic step with verification"
@@ -271,20 +322,21 @@ isProject: false
 ---
 ```
 
-### 8b. Plan body (required sections)
+### 9b. Plan body (required sections)
 
-1. Mermaid architecture diagram (from Step 2, updated if merge changed scope)
-2. Merged evidence summary
-3. Explorer agreement matrix (from Step 4)
-4. Implementation strategy
-5. Atomic execution steps (with probe templates for Complex)
-6. Verification & Test Specification (from Step 7 — includes test spec table)
+1. Jira Issue Link & Attachment Status (e.g., `**Jira Issue:** [PROJ-XXXX](https://jira.example.com/browse/PROJ-XXXX) (plan attached)`)
+2. Mermaid architecture diagram (from Step 2, updated if merge changed scope)
+3. Merged evidence summary
+4. Explorer agreement matrix (from Step 4)
+5. Implementation strategy
+6. Atomic execution steps (with probe templates for Complex)
+7. Verification & Test Specification (from Step 7 — includes test spec table)
 
-### 8c. Present and index (mandatory)
+### 9c. Present and index (mandatory)
 
 1. **Paste the full plan in this conversation** — not only on disk, not only in subagent output.
 2. Call `memory_store` **NOW**: `title` = plan filename, `content` = **full plan file body**, `doc_type: plan`, `workspace` = current path.
-3. End with: *"Review the plan above. When approved, run `/pre-flight`."*
+3. End with: *"Plan written and attached to Jira issue {key}. Review the plan above. When approved, run `/pre-flight`."*
 
 ---
 
@@ -293,6 +345,9 @@ isProject: false
 - Forwarding the raw user prompt to explorers instead of the Exploration Design Brief
 - Starting Step 4 before all explorers finish
 - Building on assumptions instead of explorer evidence
+- Deferring Jira issue creation to `/eop` instead of creating/linking it with the plan
+- Creating Jira issues without user approval
+- Failing to attach `.plan.md` to the Jira issue
 - One explorer, or same `subagent_type` / model twice
 - Fast/non-thinking models for exploration or probe validation
 - Skipping `@ai-shebang` reads

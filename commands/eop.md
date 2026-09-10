@@ -14,7 +14,7 @@
 | :--- | :--- | :--- | :--- |
 | 1 | Main agent | **`memory_search` NOW** | Hits shown |
 | 2 | Main agent | **Update project/folder docs** | Docs current (or no-op confirmed) |
-| 3 | Main agent | **Jira issue check** | User confirmed (create/update/skip) |
+| 3 | Main agent | **Jira issue update & close** | Linked issue updated / transitioned (or fallback handled) |
 | 4 | Main agent | **Continual Learning extraction** | `AGENTS.md` updated (or no-op confirmed) |
 | 5 | Main agent | **Context compression** | Session digest written |
 | 6 | Main agent | **`memory_store` NOW** | Indexed |
@@ -69,32 +69,36 @@ If the session was purely exploratory (bootstrap only, no execution): skip this 
 
 ---
 
-## Step 3: Jira Issue Check
+## Step 3: Jira Issue Update & Close
 
-Verify whether the session's work relates to a tracked Jira issue, and whether Jira needs updating.
+Update the Jira issue associated with this work (created or linked during `/create-plan` and recorded in the `.plan.md` frontmatter).
 
 ### Procedure
 
-1. **Ask the user:**
+1. **Resolve linked Jira issue:**
+   - Read `jira` key from the `.plan.md` frontmatter (e.g. `~/.cursor/plans/{slug}.plan.md`) or session context.
 
-   > "Is this work tracked in a Jira issue? Should I create or update one?"
-   >
-   > Options:
-   > - **Update existing** — provide the issue key and I'll add a comment or transition
-   > - **Create new** — I'll draft a task/story under the appropriate epic
-   > - **Skip** — no Jira tracking needed for this work
+2. **If issue is linked (e.g., `PROJ-XXXX`):**
+   - Confirm with user: *"Session work complete. Ready to update {key} with the MR link, artifacts, and transition status?"*
+   - Add completion comment summarizing outcomes:
+     - MR/PR URL (or commit SHAs)
+     - Test verification and CI gate results
+     - Links to produced artifacts (code review, session digest)
+   - (Optional) attach final session digest: upload `{slug}-session-digest_*.md` via Jira attachments API.
+   - Discover available transitions via `GET /rest/api/3/issue/{key}/transitions` (never hardcode transition ID).
+   - Offer status transition (e.g., `Dev Complete`, `In Review`, or `Closed`) and execute upon user confirmation.
 
-2. **If "Update existing":**
-   - Fetch the issue to confirm it's the right one
-   - Add a comment summarizing what was done (artifacts, commits, outcomes)
-   - Offer to transition (e.g., Dev Complete) if appropriate
-
-3. **If "Create new":**
-   - Ask which epic to parent under
-   - Draft summary + description
-   - Present draft for approval before creating
-
-4. **If "Skip":** proceed to Step 4.
+3. **Fallback (if no issue was linked in `/create-plan`):**
+   - Ask the user:
+     > "No Jira issue was linked during `/create-plan`. Should I link an existing issue or create one now?"
+     >
+     > Options:
+     > - **Update existing** — provide the issue key and I'll add the completion comment/transition
+     > - **Create new** — I'll draft a task/story under an epic, attach the plan, and record outcomes
+     > - **Skip** — no Jira tracking needed for this work
+   - If "Update existing": follow update procedure above.
+   - If "Create new": draft under appropriate epic, attach `.plan.md`, present for approval before creating.
+   - If "Skip": proceed to Step 4.
 
 **Important:** Use your Jira MCP or REST API integration for reads and writes. Adapt to your project's Jira workflow and required fields.
 
@@ -208,9 +212,11 @@ End with:
 - Writing duplicate entries already in `AGENTS.md`
 - Skipping `memory_search` or `memory_store`
 - Overwriting existing learnings instead of appending/updating
-- Creating Jira issues without user approval
+- Treating Jira issue creation as the primary flow here instead of in `/create-plan`
+- Transitioning issues or posting comments without user approval
+- Hardcoding transition IDs instead of discovering them via `GET /rest/api/3/issue/{key}/transitions`
 - Updating docs with speculative/planned work that wasn't actually executed
-- Skipping the Jira check when the session clearly relates to a tracked epic
+- Skipping Jira outcome update when an issue is linked in the plan
 
 ## Pipeline position
 
