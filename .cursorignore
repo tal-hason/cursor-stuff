@@ -1,0 +1,35 @@
+# .cursorignore for ~/.cursor configuration repo
+
+# Large & binary assets
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.ico
+*.zip
+*.tar.gz
+
+# Runtime telemetry & logs
+browser-logs/
+ai-tracking/
+statsig-cache.json
+ide_state.json
+cli-config.json
+agent-cli-state.json
+argv.json
+blocklist
+unified_repo_list.json
+
+# Internal states & large caches
+extensions/
+chats/
+snapshots/
+worktrees/
+projects/
+managed/
+plugins/
+skills-cursor/
+
+# Sync manifest
+.sync-manifest.json
