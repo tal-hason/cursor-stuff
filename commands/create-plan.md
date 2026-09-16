@@ -115,7 +115,8 @@ Each Task prompt MUST include:
 
 1. **Exploration Design Brief** — entire document from Step 2 (all 7 sections)
 2. **Mission statement** — one sentence: *"Validate, refute, and enrich this design brief with codebase evidence. Do not author the final plan."*
-3. **Output contract** — return only the structured evidence report (format below); no plan authoring
+3. **Communication Contract** — strict telegraphic style (caveman), zero conversational filler or greetings, output structured evidence report directly
+4. **Output contract** — return only the structured evidence report (format below); no plan authoring
 
 Optional one-line user context is fine; the brief is the source of truth for exploration scope.
 

@@ -1,6 +1,6 @@
 ---
-description: "Guidelines for designing microservices and event-driven systems as independent controllers, extending Hexagonal Architecture to the network boundary with Enterprise Integration Patterns."
-alwaysApply: true
+description: "Microservices architecture, distributed control systems, event-driven messaging, Hexagonal driving/driven ports, idempotency, saga, and circuit breaker patterns."
+alwaysApply: false
 ---
 
 # Microservices: Distributed Control Systems

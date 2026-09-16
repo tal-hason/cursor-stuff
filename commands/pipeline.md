@@ -2,11 +2,12 @@
 
 Shared flow for all pipeline slash commands. Every stage uses the same pattern:
 
-1. **Main agent** owns the deliverable in the parent chat.
-2. **Context Package** — full artifacts pasted into worker prompts, never excerpts.
+1. **Main agent** acts purely as an orchestrator and owns the deliverable in the parent chat.
+2. **Context Package by Reference** — pass exact artifact paths, revision hashes, target files, and concise setpoints. Workers use native file/git tools to read source lines. Never duplicate multi-thousand-line diffs or whole files across parallel worker prompts.
 3. **Worker subagents** — parallel where useful; `readonly` unless executing code.
 4. **Thinking-tier models** for audit/review workers (no `*-fast` models).
 5. **Memory bookends** — `memory_search` at start (mandatory); `memory_store` at end (mandatory). See [Memory contract](#memory-contract) below.
+6. **Telegraphic Worker Communication** — subagents communicate machine-to-machine (caveman style): zero conversational filler, pleasantries, or narrative preambles. Output findings directly using structured markdown/YAML tables.
 
 ## Memory contract
 

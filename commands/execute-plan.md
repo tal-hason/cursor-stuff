@@ -32,38 +32,36 @@ Call `memory_search` **before any other work** (see `pipeline.md`):
 
 ---
 
-## Step 2: Execution Context Package
+## Step 2: Execution Context Package (by Reference)
 
 Read from disk:
 
-1. **Full `.plan.md`** (YAML frontmatter + entire body)
-2. **Latest pre-flight report** — newest `~/.cursor/plans/{slug}-Pre-Flight-Review_*.md` by filename timestamp (if any exist)
+1. **Plan path** (`.plan.md`)
+2. **Latest pre-flight report path** — newest `~/.cursor/plans/{slug}-Pre-Flight-Review_*.md` by filename timestamp (if any exist)
 3. Current todo statuses from plan frontmatter
 
 ```markdown
 ## Execution Context Package: {plan-slug}
 
 ### 1. Plan Identity
-- Path, overview, workspace
+- Path: absolute path to `.plan.md` (read directly via `view_file`)
+- Overview, workspace
 
-### 2. Full Plan Text
-(complete file)
-
-### 3. Pre-Flight Status
+### 2. Pre-Flight Status
 - Latest report path + date
 - Overall confidence, Ready/Caution/Stop
 - Path to Green blockers (if any)
 - Prior pre-flight reports summarized (if re-runs exist)
 
-### 4. Execution State
+### 3. Execution State
 - Todo list with current status (pending/in_progress/completed/blocked)
 - Next actionable todo id
 
-### 5. Prior Art
+### 4. Prior Art
 - Memory hits from Step 1
 - Prior execution outcomes for this plan
 
-### 6. Mission
+### 5. Mission
 Implement approved plan step by step. Update plan frontmatter todos. Spawn `probe-runner` only for Complex/probe steps. Propose commit messages. Do not skip verification.
 ```
 
@@ -88,7 +86,7 @@ Iterative pre-flight is **expected**. Never block the user from running `/pre-fl
 
 ## Step 4: Dispatch Executor + Test Writer (Parallel)
 
-**Two Task calls in one message.** Both agents receive the **entire Execution Context Package** (all 6 sections).
+**Two Task calls in one message.** Both agents receive the **Execution Context Package by Reference** (all 5 sections).
 
 | Agent | `subagent_type` | Agent doc | Mission |
 | :--- | :--- | :--- | :--- |
@@ -98,9 +96,10 @@ Iterative pre-flight is **expected**. Never block the user from running `/pre-fl
 ### Dispatch rules
 
 1. Both dispatched in the **same message** (parallel).
-2. Both receive the **full Execution Context Package** — identical input, different missions.
-3. The Test Writer prompt MUST include: *"You are running in parallel with a code executor. Do not write implementation code. Write tests from the plan's Test Specification table only."*
-4. For **Complex** steps, executor may spawn `probe-runner` — test writer skips those rows (flags as "pending probe").
+2. Both receive the **Execution Context Package by Reference** — pass plan path, do not dump entire plan body into both prompts.
+3. Both prompts MUST enforce the **Communication Contract**: strict telegraphic / caveman format, zero conversational filler, output status and actions directly.
+4. The Test Writer prompt MUST include: *"You are running in parallel with a code executor. Do not write implementation code. Write tests from the plan's Test Specification table only."*
+5. For **Complex** steps, executor may spawn `probe-runner` — test writer skips those rows (flags as "pending probe").
 
 **WAIT** for **both** agents to finish or report blocked state before Step 5.
 

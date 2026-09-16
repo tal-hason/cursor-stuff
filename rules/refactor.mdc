@@ -1,6 +1,6 @@
 ---
-description: "Before refactoring or splitting a codebase, create a documentation file describing all existing logic and functions to validate nothing is lost post-refactor."
-alwaysApply: true
+description: "Safety rules before refactoring or splitting a codebase or file: pre-refactor logic documentation."
+alwaysApply: false
 ---
 
 # Refactoring Safety Rule

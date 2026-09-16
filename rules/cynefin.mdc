@@ -1,6 +1,6 @@
 ---
-description: "A foundational sense-making rule based on the Cynefin framework. It classifies problems to determine the correct type of practice (Best, Good, Emergent, or Novel) to apply, governing the other rules."
-alwaysApply: true
+description: "Cynefin sense-making framework: classify problems into Clear, Complicated, Complex, Chaotic, or Disorder to govern decision making, probes, and architectural practice."
+alwaysApply: false
 ---
 
 # Mandate: Cynefin Sense-Making

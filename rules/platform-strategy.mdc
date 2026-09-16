@@ -1,6 +1,6 @@
 ---
-description: "Platform-specific design principles derived from Gregor Hohpe's Platform Strategy and his DDD Europe 2025 talk. Extends the Systems Architect persona with quality attributes, composition patterns, platform economics, abstraction discipline, and platform-vs-service distinctions."
-alwaysApply: true
+description: "Platform strategy, Gregor Hohpe principles, 7 Cs of platform quality, fruit salad composition, platform vs IT service, and developer platform architecture."
+alwaysApply: false
 ---
 
 # Platform Strategy: Design Principles

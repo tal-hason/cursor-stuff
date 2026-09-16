@@ -35,36 +35,33 @@ Call `memory_search` **before any other work** (see `pipeline.md`):
 
 ---
 
-## Step 2: Pre-Flight Context Package
+## Step 2: Pre-Flight Context Package (by Reference)
 
-**Main agent only.** Read the plan file from disk. Build this package — auditors receive the **entire package**, not a summary.
+**Main agent only.** Build this package — auditors receive the **package by reference** with exact file paths, avoiding prompt token bloat from duplicating large plan files:
 
 ```markdown
 ## Pre-Flight Context Package: {plan-slug}
 
 ### 1. Plan Identity
-- **Path:** absolute path to `.plan.md`
+- **Path:** absolute path to `.plan.md` (read directly via `view_file`)
 - **Name / overview:** from YAML frontmatter
 - **Workspace:** current workspace root
 
-### 2. Full Plan Text
-(paste complete plan body + YAML frontmatter — every section, every todo)
-
-### 3. Plan Structure Index
+### 2. Plan Structure Summary
 - Numbered atomic steps with Cynefin tags from the plan
 - Complex / probe-required steps highlighted
 - Files referenced in the plan (absolute paths)
 
-### 4. Prior Art & Iteration History
+### 3. Prior Art & Iteration History
 - Relevant `memory_search` hits from Step 1
 - **All prior** `*-Pre-Flight-Review_*.md` for this plan slug (summarize confidence trend)
 - If plan changed since last pre-flight: note what changed (diff summary or user statement)
 
-### 5. Audit Mission
-Stress-test the plan above. Classify each step (Cynefin), score confidence, find gaps. Do not execute code.
+### 4. Audit Mission
+Stress-test the plan above. Classify each step (Cynefin), score confidence, find gaps. Do not execute code. Read the plan from its path directly.
 ```
 
-**Gate:** Package sections 1–3 complete before Step 3. Never dispatch auditors with only the user’s last message or a plan excerpt.
+**Gate:** Package complete before Step 3. Never dispatch auditors with only the user’s last message.
 
 ---
 
@@ -86,9 +83,10 @@ Dispatch **3** `pre-flight` subagents in **one message**. `readonly: true`.
 
 ### Each Task prompt MUST include
 
-1. **Full Pre-Flight Context Package** (all 5 sections from Step 2)
+1. **Pre-Flight Context Package by Reference** (pass plan path rather than dumping whole plan body)
 2. **Mission:** execute the `pre-flight` agent procedure; return structured Pre-Flight Dashboard only
-3. **Output contract:** per `agents/pre-flight.md` output format
+3. **Communication Contract:** strict telegraphic style (caveman), zero greetings/filler/intros, start directly with `### 1. Confidence Dashboard`
+4. **Output contract:** per `agents/pre-flight.md` output format
 
 Per-auditor fallback: A → gemini-3.1-pro; B → gpt-5.4-medium → composer-2.5; C → gemini-3.1-pro → gpt-5.4-medium.
 

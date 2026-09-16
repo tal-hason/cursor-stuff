@@ -45,26 +45,26 @@ Call `memory_search` **before any other work** (see `pipeline.md`):
 
 ---
 
-## Step 3: Code Review Context Package
+## Step 3: Code Review Context Package (by Reference)
 
-**Main agent only.** Read the original `.plan.md` from disk if available.
+**Main agent only.** Build the package by reference to avoid prompt token duplication across all panel members:
 
 ```markdown
 ## Code Review Context Package: {plan-slug}
 
 ### 1. Plan Identity
-- Plan path, overview, workspace
-- **Full plan text** (complete file)
+- Plan path (read via `view_file`), overview, workspace
 - Pre-flight report path/summary if available
 
 ### 2. Execution Scope
 - Which plan todos were implemented
 - Commits or summary of changes
 
-### 3. Diff Scope
-- Modified files (absolute paths), line count
-- Staged diff OR read files + `git diff` per path
+### 3. Diff Scope (by Reference)
+- Git range: `git diff <base>...HEAD`
+- Modified files (absolute paths) and line counts
 - Hexagonal layer per file (Domain / Port / Adapter / Infrastructure)
+*(Reviewers inspect diffs and files directly using native git / view_file tools)*
 
 ### 4. Consumer Map (initial)
 - Callers/consumers from Step 2
@@ -144,12 +144,13 @@ One message, one Task per panel member, `readonly: true`.
 
 ### Each Task prompt MUST include
 
-1. **Full Code Review Context Package** (all 6 sections)
-2. **Reviewer role** — ID + lens from triage table
-3. **Skill addendum** — pasted checklist from Step 4 (if applicable)
-4. **TDD context (C1 only):** Include the plan's Step 7 Test Specification table + the reconciliation summary from `/execute-plan` outcome. C1 validates: (a) every spec row has a corresponding test, (b) tests assert on public interface not implementation details, (c) divergences noted in reconciliation are resolved or justified.
-5. **Mission:** return structured findings only (Summary, Downstream Impact, Findings table, Verification suggestions) — use `agents/codereview.md` output format as baseline
-6. **Flagged By:** reviewer must sign findings with their ID (R1, R5, C6, …)
+1. **Code Review Context Package by Reference** (pass plan path, git diff range, and modified paths; do NOT dump full file contents)
+2. **Communication Contract:** strict telegraphic style (caveman), zero conversational filler or greetings, output structured findings directly
+3. **Reviewer role** — ID + lens from triage table
+4. **Skill addendum** — pasted checklist from Step 4 (if applicable)
+5. **TDD context (C1 only):** Include the plan's Step 7 Test Specification table + the reconciliation summary from `/execute-plan` outcome. C1 validates: (a) every spec row has a corresponding test, (b) tests assert on public interface not implementation details, (c) divergences noted in reconciliation are resolved or justified.
+6. **Mission:** return structured findings only (Summary, Downstream Impact, Findings table, Verification suggestions) — use `agents/codereview.md` output format as baseline
+7. **Flagged By:** reviewer must sign findings with their ID (R1, R5, C6, …)
 
 ---
 
