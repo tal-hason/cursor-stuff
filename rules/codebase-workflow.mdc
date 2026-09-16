@@ -34,3 +34,10 @@ alwaysApply: true
 - Justify architectural changes briefly for future maintainers
 - After each file change, propose a short, meaningful commit message
 - Build and test TypeScript compilation before committing
+
+## Efficiency & Context Hygiene
+
+- **Anti-Duplication (Ponytail)**: Probe and grep existing code before writing new utilities or types. Never reimplement what exists.
+- **Input Token Compression (Caveman/Headroom)**: Supply Context Packages by Reference (paths, diff ranges); enforce telegraphic, zero-filler communication for workers.
+- **Terminal Compression (RTK)**: Suppress noisy CLI outputs via `-q`, `head`, `tail`, `grep`, or `jq`. Never dump runaway stdout/stderr into context.
+- **Clean Branching & Rollback (PI)**: Work in small verifiable batches. When an approach stalls, roll back or launch a fresh subagent rather than dragging toxic retry context.
