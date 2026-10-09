@@ -2,7 +2,7 @@
 
 Reference for `/architect-bootstrap` Step 6. **Not a subagent** — the main agent authors the canvas after readonly scanners return.
 
-**Workflow:** `commands/architect-bootstrap.md` · **Pipeline:** `commands/pipeline.md`
+**Workflow:** `skills/architect-bootstrap/SKILL.md` · **Pipeline:** `skills/agent-pipeline/SKILL.md`
 
 ---
 

@@ -12,18 +12,21 @@ A complete agent pipeline for [Cursor IDE](https://cursor.com) that turns a vagu
 This is a `.cursor` configuration package. Copy its contents into your `~/.cursor/` directory (or a project-level `.cursor/` folder) to get the full pipeline.
 
 ```
-cursor-public/
+Antigravity (AGY) & Cursor Agent Pipeline
 ├── AGENTS.md                              # Pipeline memory (continual learning)
-├── commands/                              # 9 slash commands
-│   ├── pipeline.md                        # Canonical pipeline contract
-│   ├── architect-bootstrap.md             # Step 1: workspace scan + canvas brief
-│   ├── create-plan.md                     # Step 2: evidence-backed plan
-│   ├── pre-flight.md                      # Step 3: confidence audit (iterative)
-│   ├── execute-plan.md                    # Step 4: implement plan (parallel TDD)
-│   ├── codereview.md                      # Step 5: multi-reviewer panel
-│   ├── eop.md                             # Step 6: session digest + learnings
-│   ├── uiux-expert.md                     # Standalone: UI/UX design orchestrator
-│   └── generate-shebangs.md               # Standalone: AI Shebang header generator
+├── skills/                                # 12 modular skills (progressive disclosure)
+│   ├── agent-pipeline/SKILL.md            # Canonical pipeline orchestrator
+│   ├── architect-bootstrap/SKILL.md       # Step 1: workspace scan + canvas brief
+│   ├── create-plan/SKILL.md               # Step 2: evidence-backed plan
+│   ├── pre-flight/SKILL.md                # Step 3: confidence audit (iterative)
+│   ├── execute-plan/SKILL.md              # Step 4: implement plan (parallel TDD)
+│   ├── codereview/SKILL.md                # Step 5: multi-reviewer panel
+│   ├── eop/SKILL.md                       # Step 6: session digest + learnings
+│   ├── uiux-expert/SKILL.md               # Standalone: UI/UX design orchestrator
+│   ├── generate-shebangs/SKILL.md         # Standalone: AI Shebang header generator
+│   ├── probe-before-assume/SKILL.md       # Evidence-first behavior
+│   ├── cynefin-sense-making/SKILL.md      # Domain classification
+│   └── platform-design-review/SKILL.md    # Platform review (6 tests + 7 C's)
 ├── agents/                                # 7 worker subagent definitions
 │   ├── codereview.md                      # Principal code reviewer (R1)
 │   ├── pre-flight.md                      # Cynefin confidence auditor
@@ -36,7 +39,7 @@ cursor-public/
 │   └── architect-brief-canvas.md          # Canvas structure for bootstrap
 ├── docs/
 │   └── pipeline-howto.md                  # Team onboarding guide
-├── rules/                                 # 12 always-on rules (.mdc)
+├── rules/                                 # 12 always-on rules (.mdc / .md)
 │   ├── persona.md                         # Systems Architect persona
 │   ├── cynefin.mdc                        # Cynefin sense-making framework
 │   ├── kiss.mdc                           # KISS problem-solving principle
@@ -49,10 +52,6 @@ cursor-public/
 │   ├── platform-economics.mdc             # Double Pyramid economics model
 │   ├── platform-abstraction-quality.mdc   # Abstraction vs illusion discipline
 │   └── plan-probes.mdc                    # Complex step probe templates
-├── skills/                                # 3 reusable agent skills
-│   ├── probe-before-assume/SKILL.md       # Evidence-first behavior
-│   ├── cynefin-sense-making/SKILL.md      # Domain classification
-│   └── platform-design-review/SKILL.md    # Platform review (6 tests + 7 C's)
 ├── hooks.json                             # Session hooks configuration
 └── hooks/
     └── codereview-reminder.sh             # Remind to run /codereview
@@ -79,9 +78,9 @@ cp -r cursor-public/* /path/to/project/.cursor/
 ### Cherry-pick
 
 Copy individual files. At minimum, the pipeline needs:
-- `commands/pipeline.md` + the 6 pipeline commands
+- `skills/agent-pipeline/SKILL.md` + the 6 pipeline skills in `skills/`
 - `agents/` (worker definitions)
-- `rules/cynefin.mdc` + `rules/persona.mdc` (core behavior)
+- `rules/cynefin.mdc` + `rules/persona.md` (core behavior)
 
 ## How the pipeline works
 

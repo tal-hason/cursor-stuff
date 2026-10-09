@@ -6,7 +6,7 @@ Workspace-specific memory for the agent pipeline. This file is maintained by `/e
 
 ## Agent pipeline (stable)
 
-**Canonical contract:** `commands/pipeline.md`
+**Canonical contract:** `skills/agent-pipeline/SKILL.md`
 
 **Flow:** `/architect-bootstrap` → `/create-plan` → `/pre-flight` → `/execute-plan` → `/codereview` → `/eop`
 
