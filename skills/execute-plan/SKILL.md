@@ -86,43 +86,44 @@ Using the **latest** pre-flight report:
 
 ---
 
-## Step 4: Dispatch Executor + Test Writer (Parallel)
+## Step 4: Red-First Phased Dispatch (Executable Specifications First)
 
-**Two subagents in parallel.** Both receive the **Execution Context Package by Reference**:
+Follow Farley's 3 rules for AI execution:
+1. **Red Before Green**: Run tests before writing implementation code; failure is the only proof the test detects defects.
+2. **Anti-Tampering Contract**: Test files are immutable setpoints. Coding agents must not modify tests to make them pass.
+3. **Small Verifiable Batches**: Step-by-step implementation against the locked test harness.
 
-| Agent | Role | Subagent doc | Mission |
-| :--- | :--- | :--- | :--- |
-| **Code Executor** | Plan Executor | `agents/execute-plan.md` | Implement plan steps — write production code |
-| **Test Writer** | Test Writer | `agents/execute-plan-tests.md` | Write tests from Step 7 Test Specification — independently |
+### Phase 4A: Test Specifier (`execute-plan-tests`)
+1. Dispatch `execute-plan-tests` with the Execution Context Package by reference.
+2. The Test Specifier authors the 4-layer acceptance tests (Intent, DSL, Protocol Drivers, SUT targets) from plan Step 7.
+3. **Red Failure Proof**: The Test Specifier runs the test suite and reports explicit failure output (RED).
+4. Main agent verifies that test files are committed or sealed as the contract setpoint.
 
-### Dispatch rules
-
-1. Both dispatched in parallel.
-2. Both receive the **Execution Context Package by Reference** — pass plan path, do not dump entire plan body into both prompts.
-3. Both prompts MUST enforce the **Communication Contract**: strict telegraphic style (caveman), zero conversational filler.
-4. The Test Writer prompt MUST include: *"You are running in parallel with a code executor. Do not write implementation code. Write tests from the plan's Test Specification table only."*
-5. For **Complex** steps, executor may spawn `probe-runner` — test writer skips those rows (flags as "pending probe").
+### Phase 4B: Code Executor (`execute-plan`)
+1. Dispatch `execute-plan` with the failing test diagnostics and plan path.
+2. **Anti-Tampering Rule Enforced**: The prompt strictly forbids editing any test files.
+3. Executor iterates in small batches on production code until all acceptance tests turn GREEN.
 
 ---
 
-## Step 5: Reconciliation (TDD Gate)
+## Step 5: Reconciliation & Contract Integrity Gate
 
-After both agents complete, the main agent runs the project's test suite against the combined output:
+After both phases complete, the main agent verifies contract integrity:
 
 | Check | Command | Expected |
 | :--- | :--- | :--- |
-| Test syntax | lint / typecheck on test files | pass |
-| Test execution | project test runner | pass |
-| Coverage map | test writer's report vs plan spec table | every spec row covered |
+| Contract Integrity | `git diff --name-only` on test files | Test files unchanged during coder phase |
+| Test Execution | project test runner | 100% pass |
+| Spec Coverage | test report vs plan Step 7 scenarios | every scenario covered |
 
 ### Reconciliation outcomes
 
 | Outcome | Action |
 | :--- | :--- |
-| **All tests pass** | Tests validate implementation. Proceed to Step 6. |
-| **Tests fail — implementation bug** | Fix in code (minor), or flag as executor gap for `/codereview`. |
-| **Tests fail — test targets wrong interface** | Test writer assumed a different API shape. Adjust tests to match actual implementation. Note the divergence — it signals plan ambiguity. |
-| **Spec rows uncovered** | Test writer flagged gaps. Decide: add tests now, or carry as known gaps into `/codereview`. |
+| **All tests pass & contract intact** | Tests validate implementation cleanly. Proceed to Step 6. |
+| **Tests fail — implementation bug** | Re-dispatch `execute-plan` worker to fix implementation code (main agent MUST NOT patch code directly). |
+| **Test was tampered with by executor** | Revert test mutations; re-dispatch executor with strict warning to fix production code only. |
+| **Spec rows uncovered** | Dispatch `execute-plan-tests` to add missing scenarios before proceeding. |
 
 ---
 

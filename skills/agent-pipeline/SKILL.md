@@ -63,7 +63,7 @@ Every pipeline skill **MUST** call MCP `memory_search` (or active memory store) 
 | 1 | `architect-bootstrap` | main agent | **WHAT:** ideation (main agent, Step 2.5 when vague). **WHERE:** scanners A–C + optional D–G, H–K | Canvas + situational brief (+ optional `docs/brainstorms/` requirements) | [architect-bootstrap](../architect-bootstrap/SKILL.md) |
 | 2 | `create-plan` | main agent | 3× evidence explorers | `{slug}.plan.md` + Jira issue created/linked (plan attached) | [create-plan](../create-plan/SKILL.md) |
 | 3 | `pre-flight` | main agent | 3× `pre-flight` auditors | `{slug}-Pre-Flight-Review_*.md` | [pre-flight](../pre-flight/SKILL.md) |
-| 4 | `execute-plan` | main agent | 1× `execute-plan` executor + 1× `execute-plan-tests` test writer (parallel) | Updated plan todos + code changes + tests + reconciliation | [execute-plan](../execute-plan/SKILL.md) |
+| 4 | `execute-plan` | main agent | 1× `execute-plan-tests` (Phase 4A Red test specifier) + 1× `execute-plan` (Phase 4B Green coder) | Updated plan todos + sealed tests + code changes + reconciliation | [execute-plan](../execute-plan/SKILL.md) |
 | 5 | `codereview` | main agent | Core R1–R6 (**R5/R6 security always** except docs-only) + conditional `ce-*` / PF auditors | `{slug}-Code_Review_*.md` | [codereview](../codereview/SKILL.md) |
 | 6 | `eop` | main agent | None (terminal) | `{slug}-session-digest_*.md` + `AGENTS.md` delta + Jira issue updated/closed (MR linked) | [eop](../eop/SKILL.md) |
 

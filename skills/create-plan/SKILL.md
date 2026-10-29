@@ -180,24 +180,41 @@ Numbered steps. Each must be:
 
 ---
 
-## Step 7: Verification & Test Specification (Definition of Done)
+## Step 7: Verification & Test Specification (Farley 4-Layer ATDD & Executable Specifications)
 
-Structure this so a test author can write tests from this section alone, without seeing the implementation.
+Prose specifications drift; specifications MUST be executable. Structure test specifications using Dave Farley's 4-layer acceptance test model to isolate domain intent from protocol/transport plumbing.
 
-### 7a. Test Specification Table
-
-```markdown
-| ID | Behavior Under Test | Module / Function / Endpoint | Input | Expected Output / Side Effect | Category |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| T-1 | (what should happen) | (target from affected files) | (sample input) | (assertion) | unit / integration / e2e |
-| T-2 | (failure path) | ... | (invalid input / error) | (expected error) | unit |
-| T-3 | (edge case) | ... | (boundary condition) | (expected behavior) | unit |
+```
++-----------------------------------------------------------+
+| Layer 1: Intent (Given / When / Then - Domain Language)   |
++-----------------------------------------------------------+
+| Layer 2: Domain DSL (Language of the Problem Domain)      |
++-----------------------------------------------------------+
+| Layer 3: Protocol Drivers (HTTP, CLI, gRPC, DB Adapters)  |
++-----------------------------------------------------------+
+| Layer 4: System Under Test (SUT)                          |
++-----------------------------------------------------------+
 ```
 
-### 7b. Test Infrastructure Notes
+### 7a. Executable Scenarios (4-Layer Acceptance Specifications)
+
+```markdown
+| ID | User / Domain Scenario (Intent) | DSL Operation (Domain Level) | Protocol Driver / Adapter | SUT Target | Category |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| T-1 | Given [state], When [action], Then [outcome] | dsl.doDomainAction(...) | HttpDriver / MemoryDriver | target module/endpoint | acceptance / unit |
+| T-2 | Given [state], When [invalid action], Then [domain error] | dsl.doInvalidAction(...) | HttpDriver / MemoryDriver | target module/endpoint | acceptance / unit |
+```
+
+Rules for executable specifications:
+- **Zero Protocol Leaks in Intent**: Layer 1 must contain ZERO HTTP codes, JSON payloads, or database column names. Express pure business intent.
+- **Seam Isolation**: Protocol Drivers (Layer 3) isolate tests from infrastructure volatility so transport changes do not break test specifications.
+- **Baseline Fitness Tests**: When deferring non-functional scaling (concurrency, caching, rate limiting), specify an automated fitness test to guard the boundary assumption.
+
+### 7b. Test Infrastructure & Driver Notes
 - Existing test framework / runner
-- Test file naming and location patterns
-- Mock/stub patterns already in use
+- Test file and driver directory patterns (`test/dsl/`, `test/drivers/`)
+- Mock/stub/test-double patterns already in use
+- Test execution command: `npm test`, `pytest`, `go test ./...`
 
 ---
 
